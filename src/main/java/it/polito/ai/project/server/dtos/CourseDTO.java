@@ -8,6 +8,8 @@ public class CourseDTO extends RepresentationModel<CourseDTO> {
 
     private String name;
 
+    private String acronym;
+
     private Integer min;
 
     private Integer max;

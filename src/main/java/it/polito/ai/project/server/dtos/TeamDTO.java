@@ -4,9 +4,13 @@ import lombok.Data;
 
 @Data
 public class TeamDTO {
-    Long id;
+    private Long id;
 
-    String name;
+    private String name;
 
-    int status;
+    private int status;
+
+    private int totVM;
+
+    private int activeVM;
 }
