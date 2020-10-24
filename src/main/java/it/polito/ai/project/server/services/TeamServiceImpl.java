@@ -36,7 +36,11 @@ public class TeamServiceImpl implements TeamService {
     @Autowired
     ModelMapper modelMapper;
 
-    // Add a new course
+    /**
+     * Add a course that is not already present in the db
+     * @param course the course with all the specs
+     * @return boolean, true if is created correctly, false otherwise
+     */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public boolean addCourse(CourseDTO course) {
@@ -50,13 +54,20 @@ public class TeamServiceImpl implements TeamService {
         return true;
     }
 
-    // Retrieve an existing course
+    /**
+     * Retrieve an existing course
+     * @param name the name of the existing course
+     * @return an Optional<CourseDTO>
+     */
     @Override
     public Optional<CourseDTO> getCourse(String name) {
         return courseRepository.findById(name).map(x -> modelMapper.map(x, CourseDTO.class));
     }
 
-    // Retrieve all the courses present in the db
+    /**
+     * Retrieve all the courses present in the db
+     * @return a list of all the courses present in the db
+     */
     @Override
     public List<CourseDTO> getAllCourses() {
         return courseRepository.findAll()
@@ -65,7 +76,11 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
     }
 
-    // Add a new student
+    /**
+     * Add a new student
+     * @param student the student object to be created
+     * @return a boolean, true if created correctly, false otherwise
+     */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public boolean addStudent(StudentDTO student) {
@@ -77,14 +92,21 @@ public class TeamServiceImpl implements TeamService {
         return true;
     }
 
-    // Retrieve a student
+    /**
+     * Retrieve a student
+     * @param studentId the student id string of the student to retrieve
+     * @return an Optional<StudentDTO>
+     */
     @Override
     public Optional<StudentDTO> getStudent(String studentId) {
         return studentRepository.findById(studentId)
                                 .map(x -> modelMapper.map(x, StudentDTO.class));
     }
 
-    // Retrieve all students
+    /**
+     * Retrieve all students present in the db
+     * @return a list with all the students present in the db
+     */
     @Override
     public List<StudentDTO> getAllStudents() {
         return studentRepository.findAll()
@@ -93,7 +115,11 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
     }
 
-    // Retrieve all students enrolled in a specific existing course
+    /**
+     * Retrieve all students enrolled in a specific existing course
+     * @param courseName the course string to retrieve all the students enrolled in it
+     * @return a list of students
+     */
     @Override
     public List<StudentDTO> getEnrolledStudents(String courseName) {
         // check if the course exists
@@ -108,7 +134,12 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
     }
 
-    // Add an existing student in an existing course
+    /**
+     * Add an existing student in an existing course
+     * @param studentId the student to enroll
+     * @param courseName the course in which the student must be enrolled
+     * @return boolean, true if enrolled correctly, false otherwise
+     */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public boolean addStudentToCourse(String studentId, String courseName) {
@@ -153,7 +184,10 @@ public class TeamServiceImpl implements TeamService {
         return true;
     }
 
-    // Enable an existing course
+    /**
+     * Enable an existing course
+     * @param courseName the name of the course to enable
+     */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public void enableCourse(String courseName) {
@@ -166,7 +200,10 @@ public class TeamServiceImpl implements TeamService {
                 .setEnabled(true);
     }
 
-    // Disable an existing course
+    /**
+     * Disable an existing course
+     * @param courseName the name of the course to disable
+     */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public void disableCourse(String courseName) {
@@ -179,7 +216,12 @@ public class TeamServiceImpl implements TeamService {
                 .setEnabled(false);
     }
 
-    // Add a list of non existing students
+    /**
+     * Add a list of new students
+     * @param students the list of new students to add
+     * @return a boolean list, the value of the list is true if the
+     *         respective student was added correctly, false otherwise
+     */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public List<Boolean> addAll(List<StudentDTO> students) {
@@ -188,7 +230,13 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
     }
 
-    // Enroll to an existing course a list of existing students
+    /**
+     * Enroll to an existing course a list of existing students
+     * @param studentIds the list of students to add to the course
+     * @param courseName the course name to add students to
+     * @return a boolean list, the value of the list is true if the
+     *         respective student was added correctly, false otherwise
+     */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public List<Boolean> enrollAll(List<String> studentIds, String courseName) {
@@ -197,8 +245,14 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
     }
 
-    // Add and enroll to an existing course a list of non existing students
-    // the list is passed through a csv file
+    /**
+     * Add and enroll to an existing course a list of non existing students
+     * the list is passed through a csv file
+     * @param r the file Reader
+     * @param courseName the course name to add students to
+     * @return a boolean list, the value of the list is true if the
+     *         respective student was added correctly, false otherwise
+     */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public List<Boolean> addAndEroll(Reader r, String courseName) {
@@ -223,7 +277,11 @@ public class TeamServiceImpl implements TeamService {
                 );
     }
 
-    // Retrieve all courses in which the student is enrolled
+    /**
+     * Retrieve all courses the student is enrolled in
+     * @param studentId the student id
+     * @return list of all the courses the student is enrolled in
+     */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
     public List<CourseDTO> getCourses(String studentId) {
@@ -240,7 +298,11 @@ public class TeamServiceImpl implements TeamService {
                     .collect(Collectors.toList());
     }
 
-    // Retrieve all the teams the student belongs to
+    /**
+     * Retrieve all the teams the student belongs to
+     * @param studentId the student id
+     * @return list of the teams the student belongs to
+     */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
     public List<TeamDTO> getTeamsForStudent(String studentId) {
@@ -255,7 +317,11 @@ public class TeamServiceImpl implements TeamService {
                                 .collect(Collectors.toList());
     }
 
-    // Retrieve all the members of an existing team
+    /**
+     * Retrieve all the members of an existing team
+     * @param TeamId the team id
+     * @return the list of students that belong to the specified team
+     */
     @Override
     public List<StudentDTO> getMembers(Long TeamId) {
         // check if the team exist
@@ -270,7 +336,13 @@ public class TeamServiceImpl implements TeamService {
                             .collect(Collectors.toList());
     }
 
-    // propose a team for an existing course
+    /**
+     * Propose a team for an existing course
+     * @param courseId course id to which the proposed team belongs
+     * @param name team name
+     * @param memberIds list of students proposed for the team
+     * @return the TeamDTO object
+     */
     @Override
     public TeamDTO proposeTeam(String courseId, String name, List<String> memberIds) {
         Set<String> setStudents = new HashSet<String>(memberIds);
@@ -349,7 +421,11 @@ public class TeamServiceImpl implements TeamService {
         return modelMapper.map(team, TeamDTO.class);
     }
 
-    // Retrieve the existing team for an existing course
+    /**
+     * Retrieve the existing team for an existing course
+     * @param courseName the course name
+     * @return list of all the teams in the course
+     */
     @Override
     public List<TeamDTO> getTeamForCourse(String courseName) {
         // check if the course exist
@@ -364,7 +440,11 @@ public class TeamServiceImpl implements TeamService {
                                 .collect(Collectors.toList());
     }
 
-    // Retrieve all the students that have a team in an existing course
+    /**
+     * Retrieve all the students who have a team in an existing course
+     * @param courseName the course name
+     * @return list of all the students who have a team in the specified course
+     */
     @Override
     public List<StudentDTO> getStudentsInTeams(String courseName) {
         // check if the course exist
@@ -377,7 +457,13 @@ public class TeamServiceImpl implements TeamService {
                                 .collect(Collectors.toList());
     }
 
-    // Retrieve existing students that are not in a team of an existing course
+    //
+
+    /**
+     * Retrieve existing students who are not part of a course team
+     * @param courseName coruse name
+     * @return list of students who are not part of a course team
+     */
     @Override
     public List<StudentDTO> getAvailableStudents(String courseName) {
         // check if the course exist
@@ -390,7 +476,10 @@ public class TeamServiceImpl implements TeamService {
                                 .collect(Collectors.toList());
     }
 
-    // enable an existing team
+    /**
+     * Enable an existing team
+     * @param teamId team id to enable
+     */
     @Override
     public void enableTeam(Long teamId) {
         // check if the team exist
@@ -401,7 +490,10 @@ public class TeamServiceImpl implements TeamService {
         teamRepository.findById(teamId).get().setStatus(1);
     }
 
-    // Delete an existing team
+    /**
+     * Delete an existing team
+     * @param teamId team id to delete
+     */
     @Override
     public void evictTeam(Long teamId) {
         Team t;
