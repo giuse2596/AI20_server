@@ -3,6 +3,8 @@ package it.polito.ai.project.server.controllers;
 import it.polito.ai.project.server.dtos.CourseDTO;
 import it.polito.ai.project.server.dtos.StudentDTO;
 import it.polito.ai.project.server.dtos.TeamDTO;
+import it.polito.ai.project.server.services.GeneralService;
+import it.polito.ai.project.server.services.TeacherService;
 import it.polito.ai.project.server.services.TeamService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,11 +24,17 @@ public class StudentController {
     @Autowired
     TeamService teamService;
 
+    @Autowired
+    TeacherService teacherService;
+
+    @Autowired
+    GeneralService generalService;
+
     ModelHelper modelHelper;
 
     @GetMapping({"", "/"})
     public List<StudentDTO> all(){
-        return teamService.getAllStudents()
+        return generalService.getAllStudents()
                 .stream()
                 .map(x -> modelHelper.enrich(x))
                 .collect(Collectors.toList());
@@ -34,7 +42,7 @@ public class StudentController {
 
     @GetMapping("/{id}")
     public StudentDTO getOne(@PathVariable String id){
-        Optional<StudentDTO> student = teamService.getStudent(id);
+        Optional<StudentDTO> student = generalService.getStudent(id);
 
         if(!student.isPresent()){
             throw new ResponseStatusException(HttpStatus.CONFLICT, id);
@@ -47,7 +55,7 @@ public class StudentController {
 
         try {
 
-            if (!teamService.addStudent(studentDTO)) {
+            if (!teacherService.addStudent(studentDTO)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, studentDTO.getId());
             }
         }
@@ -55,12 +63,12 @@ public class StudentController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
 
-        return modelHelper.enrich(teamService.getStudent(studentDTO.getId()).get());
+        return modelHelper.enrich(generalService.getStudent(studentDTO.getId()).get());
     }
 
     @GetMapping("/{id}/courses")
     public List<CourseDTO> getCourses(@PathVariable String id){
-        Optional<StudentDTO> student = teamService.getStudent(id);
+        Optional<StudentDTO> student = generalService.getStudent(id);
 
         if(!student.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
@@ -75,7 +83,7 @@ public class StudentController {
 
     @GetMapping("/{id}/teams")
     public List<TeamDTO> getTeams(@PathVariable String id){
-        Optional<StudentDTO> student = teamService.getStudent(id);
+        Optional<StudentDTO> student = generalService.getStudent(id);
 
         if(!student.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);

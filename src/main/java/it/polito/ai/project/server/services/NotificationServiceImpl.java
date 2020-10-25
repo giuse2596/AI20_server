@@ -29,6 +29,9 @@ public class NotificationServiceImpl implements NotificationService{
     @Autowired
     public TeamServiceImpl teamService;
 
+    @Autowired
+    public TeacherServiceImp teacherService;
+
     @Override
     public void sendMessage(String address, String subject, String body) {
         SimpleMailMessage message = new SimpleMailMessage();
