@@ -44,24 +44,48 @@ public class Course {
     @OneToMany(mappedBy = "course")
     List<Assignment> assignments = new ArrayList<>();
 
+    public void setTeacher(Teacher teacher){
+        if(teacher == null){
+            if(this.teacher != null){
+                this.teacher.getCourses().remove(this);
+            }
+        }
+        else{
+            this.teacher.getCourses().add(this);
+        }
+        this.teacher = teacher;
+    }
+
+    public void setVMModel(VMModel vmModel){
+        if(vmModel == null){
+            if(this.vmModel != null){
+                this.vmModel.course = null;
+            }
+        }
+        else{
+            vmModel.course = this;
+        }
+        this.vmModel = vmModel;
+    }
+
     public void addStudent(Student student){
-            students.add(student);
-            student.getCourses().add(this);
+        this.students.add(student);
+        student.getCourses().add(this);
     }
 
     public void addTeam(Team team){
-        teams.add(team);
-        team.setCourse(this);
+        this.teams.add(team);
+        team.course = this;
     }
 
     public void removeTeam(Team team){
-        teams.remove(team);
-        team.setCourse(null);
+        this.teams.remove(team);
+        team.course = null;
     }
 
     public void addAssignment(Assignment assignment){
         this.assignments.add(assignment);
-        assignment.setCourse(this);
+        assignment.course = this;
     }
 
 }

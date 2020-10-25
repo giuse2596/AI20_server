@@ -33,7 +33,18 @@ public class Assignment {
 
     public void addHomework(Homework homework){
         this.homeworks.add(homework);
-        homework.setAssignment(this);
+        homework.assignment = this;
     }
 
+    public void setCourse(Course course){
+        if(course == null){
+            if(this.course != null) {
+                this.course.getAssignments().remove(this);
+            }
+        }
+        else{
+            course.getAssignments().add(this);
+        }
+        this.course = course;
+    }
 }

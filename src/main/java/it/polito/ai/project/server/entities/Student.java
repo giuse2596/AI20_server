@@ -71,7 +71,7 @@ public class Student {
 
     public void addHomework(Homework homework){
         this.homeworks.add(homework);
-        homework.setStudent(this);
+        homework.student = this;
     }
 
 }

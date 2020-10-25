@@ -32,6 +32,18 @@ public class VirtualMachine {
             inverseJoinColumns = @JoinColumn(name="vm_id") )
     List<Student> owners = new ArrayList<>();
 
+    public void setTeam(Team team){
+        if(team == null){
+            if(this.team != null){
+                this.team.getVirtualMachines().remove(this);
+            }
+        }
+        else{
+            team.virtualMachines.add(this);
+        }
+        this.team = team;
+    }
+
     public void addOwner(Student student){
         this.owners.add(student);
         student.getVirtualMachines().add(this);

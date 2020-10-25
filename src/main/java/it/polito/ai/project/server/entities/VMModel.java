@@ -35,4 +35,16 @@ public class VMModel {
     @OneToOne( mappedBy = "vmModel")
     Course course;
 
+    public void setCourse(Course course){
+        if(course == null){
+            if(this.course != null){
+                this.course.vmModel = null;
+            }
+        }
+        else{
+            course.vmModel = this;
+        }
+        this.course = course;
+    }
+
 }

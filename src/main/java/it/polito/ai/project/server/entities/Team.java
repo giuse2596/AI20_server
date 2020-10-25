@@ -42,7 +42,9 @@ public class Team {
 
     public void setCourse(Course course){
         if(course == null){
-            this.course.getTeams().remove(this);
+            if(this.course != null) {
+                this.course.getTeams().remove(this);
+            }
         }
         else {
             course.getTeams().add(this);
@@ -62,10 +64,11 @@ public class Team {
 
     public void addVM(VirtualMachine virtualMachine){
         this.virtualMachines.add(virtualMachine);
-        virtualMachine.setTeam(this);
+        virtualMachine.team = this;
     }
 
     public void removeVM(VirtualMachine virtualMachine){
         this.virtualMachines.remove(virtualMachine);
+        virtualMachine.team = null;
     }
 }

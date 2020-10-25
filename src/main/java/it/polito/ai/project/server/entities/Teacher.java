@@ -35,7 +35,7 @@ public class Teacher {
 
     public void addCourse(Course course){
         this.courses.add(course);
-        course.setTeacher(this);
+        course.teacher = this;
     }
 
 }
