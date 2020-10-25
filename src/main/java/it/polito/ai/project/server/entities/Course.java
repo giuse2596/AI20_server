@@ -73,6 +73,11 @@ public class Course {
         student.getCourses().add(this);
     }
 
+    public void removeStudent(Student student){
+        students.remove(student);
+        student.getCourses().remove(this);
+    }
+
     public void addTeam(Team team){
         this.teams.add(team);
         team.course = this;

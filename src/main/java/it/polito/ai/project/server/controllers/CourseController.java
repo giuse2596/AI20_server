@@ -3,9 +3,7 @@ package it.polito.ai.project.server.controllers;
 import it.polito.ai.project.server.dtos.CourseDTO;
 import it.polito.ai.project.server.dtos.StudentDTO;
 import it.polito.ai.project.server.dtos.TeamDTO;
-import it.polito.ai.project.server.services.CourseNotFoundException;
-import it.polito.ai.project.server.services.StudentNotFoundExeption;
-import it.polito.ai.project.server.services.TeamService;
+import it.polito.ai.project.server.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.TransactionSystemException;
@@ -29,6 +27,12 @@ public class CourseController {
     @Autowired
     private TeamService teamService;
 
+    @Autowired
+    private GeneralService generalService;
+
+    @Autowired
+    private TeacherService teacherService;
+
     private ModelHelper modelHelper;
 
     @GetMapping({"", "/"})
@@ -41,7 +45,7 @@ public class CourseController {
 
     @GetMapping("/{name}")
     public CourseDTO getOne(@PathVariable String name){
-        Optional<CourseDTO> course = teamService.getCourse(name);
+        Optional<CourseDTO> course = generalService.getCourse(name);
 
         if(!course.isPresent()){
             throw new ResponseStatusException(HttpStatus.CONFLICT, name);
@@ -52,7 +56,7 @@ public class CourseController {
     @GetMapping("/{name}/enrolled")
     public List<StudentDTO> enrolledStudents(@PathVariable String name){
 
-        return teamService.getEnrolledStudents(name)
+        return teacherService.getEnrolledStudents(name)
                 .stream()
                 .map(x -> modelHelper.enrich(x))
                 .collect(Collectors.toList());
@@ -62,7 +66,7 @@ public class CourseController {
     public CourseDTO addCourse(@Valid @RequestBody CourseDTO dto){
 
         try {
-            if (!teamService.addCourse(dto)) {
+            if (!teacherService.addCourse(dto)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, dto.getName());
             }
         }
@@ -70,14 +74,14 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
 
-        return modelHelper.enrich(teamService.getCourse(dto.getName()).get());
+        return modelHelper.enrich(generalService.getCourse(dto.getName()).get());
     }
 
     @PostMapping("/{name}/enrollOne")
     @ResponseStatus(HttpStatus.CREATED)
     public void enrollStudent(@Valid @RequestBody StudentDTO studentDTO, @PathVariable String name){
         try{
-             if(!teamService.addStudentToCourse(studentDTO.getId(), name)){
+             if(!teacherService.addStudentToCourse(studentDTO.getId(), name)){
                  throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, studentDTO.getId()+""+name);
              }
         }
@@ -101,43 +105,43 @@ public class CourseController {
         catch (IOException e){
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
-        return teamService.addAndEroll(reader, name);
+        return teacherService.addAndEroll(reader, name);
     }
 
     @PostMapping({"/{name}/enable"})
     public CourseDTO enableCourse(@PathVariable String name){
 
         try {
-            teamService.enableCourse(name);
+            teacherService.enableCourse(name);
         }
         catch (CourseNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, name);
         }
 
-        return modelHelper.enrich(teamService.getCourse(name).get());
+        return modelHelper.enrich(generalService.getCourse(name).get());
     }
 
     @PostMapping({"/{name}/disable"})
     public CourseDTO disableCourse(@PathVariable String name){
 
         try {
-            teamService.disableCourse(name);
+            teacherService.disableCourse(name);
         }
         catch (CourseNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, name);
         }
 
-        return modelHelper.enrich(teamService.getCourse(name).get());
+        return modelHelper.enrich(generalService.getCourse(name).get());
     }
 
     @GetMapping("/{name}/teams")
     public List<TeamDTO> getCourseTeams(@PathVariable String name){
-        Optional<CourseDTO> course = teamService.getCourse(name);
+        Optional<CourseDTO> course = generalService.getCourse(name);
 
         if(!course.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, name);
         }
-        return teamService.getTeamForCourse(name);
+        return teacherService.getTeamForCourse(name);
     }
 
     @GetMapping("/{name}/students_in_team")

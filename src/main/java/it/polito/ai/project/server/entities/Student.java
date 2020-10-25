@@ -49,6 +49,11 @@ public class Student {
             course.getStudents().add(this);
     }
 
+    public void removeCourse(Course course){
+        courses.remove(course);
+        course.getStudents().remove(this);
+    }
+
     public void addTeam(Team team){
         this.teams.add(team);
         team.getMembers().add(this);
