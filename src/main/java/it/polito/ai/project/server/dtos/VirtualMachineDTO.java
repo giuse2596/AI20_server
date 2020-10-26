@@ -13,4 +13,6 @@ public class VirtualMachineDTO extends RepresentationModel<VirtualMachineDTO> {
     private Integer ramMax;
 
     private Integer diskSpaceMax;
+
+    private Boolean active;
 }

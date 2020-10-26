@@ -23,6 +23,10 @@ public class VirtualMachine {
     @NotBlank
     private Integer diskSpaceMax;
 
+    // status virtual machine
+    @NotBlank
+    private Boolean active;
+
     @ManyToOne
     @JoinColumn(name= "team_id")
     Team team;
