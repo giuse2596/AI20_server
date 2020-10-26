@@ -22,6 +22,15 @@ public class Team {
     @NotNull
     private int status;
 
+    @NotBlank
+    private Integer cpuMax;
+
+    @NotBlank
+    private Integer ramMax;
+
+    @NotBlank
+    private Integer diskSpaceMax;
+
     @NotNull
     private int totVM;
 

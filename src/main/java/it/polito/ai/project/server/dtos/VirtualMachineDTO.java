@@ -8,11 +8,11 @@ public class VirtualMachineDTO extends RepresentationModel<VirtualMachineDTO> {
 
     private String id;
 
-    private Integer cpuMax;
+    private Integer cpu;
 
-    private Integer ramMax;
+    private Integer ram;
 
-    private Integer diskSpaceMax;
+    private Integer diskSpace;
 
     private Boolean active;
 }

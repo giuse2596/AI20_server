@@ -15,17 +15,17 @@ public class VirtualMachine {
     private String id;
 
     @NotBlank
-    private Integer cpuMax;
+    private Integer cpu;
 
     @NotBlank
-    private Integer ramMax;
+    private Integer ram;
 
     @NotBlank
-    private Integer diskSpaceMax;
+    private Integer diskSpace;
 
     // status virtual machine
     @NotBlank
-    private Boolean active;
+    private Boolean active = false;
 
     @ManyToOne
     @JoinColumn(name= "team_id")
