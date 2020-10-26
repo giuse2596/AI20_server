@@ -8,6 +8,7 @@ import it.polito.ai.project.server.dtos.TeamDTO;
 import it.polito.ai.project.server.entities.Course;
 import it.polito.ai.project.server.entities.Student;
 import it.polito.ai.project.server.entities.Team;
+import it.polito.ai.project.server.entities.VMModel;
 import it.polito.ai.project.server.repositories.CourseRepository;
 import it.polito.ai.project.server.repositories.StudentRepository;
 import it.polito.ai.project.server.repositories.TeamRepository;
@@ -37,6 +38,8 @@ public class TeamServiceImpl implements TeamService {
     ModelMapper modelMapper;
 
     GeneralServiceImpl generalService;
+
+    TeacherServiceImp teacherService;
 
     /**
      * Retrieve all the courses present in the db
@@ -120,6 +123,7 @@ public class TeamServiceImpl implements TeamService {
     public TeamDTO proposeTeam(String courseId, String name, List<String> memberIds) {
         Set<String> setStudents = new HashSet<String>(memberIds);
         Team team = new Team();
+        VMModel vmModel = this.courseRepository.findById(courseId).get().getVmModel();
 
         // check if the course is present
         if(!courseRepository.existsById(courseId)){
@@ -179,6 +183,12 @@ public class TeamServiceImpl implements TeamService {
             throw new TeamServiceException();
         }
 
+        // check if exist other teams with the same name in the course
+        if(teacherService.getTeamForCourse(courseId).stream()
+        .filter(x -> x.getName().equals(name)).count() > 0){
+            throw new TeamServiceException();
+        }
+
         // create the team
         team.setName(name);
         team.setCourse(courseRepository.findById(courseId).get());
@@ -189,8 +199,17 @@ public class TeamServiceImpl implements TeamService {
                                             .collect(Collectors.toList())
                         );
 
+        // set resources limit for the team
+        team.setCpuMax(vmModel.getCpuMax());
+        team.setRamMax(vmModel.getRamMax());
+        team.setDiskSpaceMax(vmModel.getDiskSpaceMax());
+        team.setTotVM(vmModel.getTotalInstances());
+
+        // setted as the max of total active virtual machines specified in the model
+        team.setActiveVM(vmModel.getActiveInstances());
+
         teamRepository.save(team);
-        // team = teamRepository.findById(team.getId()).get();
+        team = teamRepository.findById(team.getId()).get();
         return modelMapper.map(team, TeamDTO.class);
     }
 
