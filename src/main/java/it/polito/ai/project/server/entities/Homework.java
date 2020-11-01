@@ -9,6 +9,13 @@ import javax.validation.constraints.NotBlank;
 @Entity
 public class Homework {
 
+    public enum Status{
+        NULL,
+        READ,
+        DELIVERED,
+        REVIEWED
+    }
+
     @Id
     @NotBlank
     private String id;
@@ -16,8 +23,9 @@ public class Homework {
     @NotBlank
     private String pathImage;
 
-    // all'inizio e' null?
-    private String status;
+    @NotBlank
+    @Enumerated(EnumType.ORDINAL)
+    private Status status;
 
     @ManyToOne
     @JoinColumn(name= "student_id")

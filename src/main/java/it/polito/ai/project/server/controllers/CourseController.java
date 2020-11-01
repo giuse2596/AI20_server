@@ -35,6 +35,10 @@ public class CourseController {
 
     private ModelHelper modelHelper;
 
+    /**
+     * URL to retrieve all the courses
+     * @return all the courses
+     */
     @GetMapping({"", "/"})
     public List<CourseDTO> all(){
         return teamService.getAllCourses()
@@ -43,6 +47,11 @@ public class CourseController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * URL to retrieve a single course
+     * @param name the name of the course
+     * @return the specified course
+     */
     @GetMapping("/{name}")
     public CourseDTO getOne(@PathVariable String name){
         Optional<CourseDTO> course = generalService.getCourse(name);
@@ -53,6 +62,11 @@ public class CourseController {
         return modelHelper.enrich(course.get());
     }
 
+    /**
+     * URL to retrieve all the students enrolled in a course
+     * @param name the name of the course
+     * @return all the students enrolled in the specified course
+     */
     @GetMapping("/{name}/enrolled")
     public List<StudentDTO> enrolledStudents(@PathVariable String name){
 
@@ -62,6 +76,11 @@ public class CourseController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * URL to create a new course
+     * @param dto the course object to create
+     * @return the course enriched with the URLs to the course services
+     */
     @PostMapping({"","/"})
     public CourseDTO addCourse(@Valid @RequestBody CourseDTO dto){
 
@@ -77,6 +96,11 @@ public class CourseController {
         return modelHelper.enrich(generalService.getCourse(dto.getName()).get());
     }
 
+    /**
+     * URL to enroll a student to a course
+     * @param studentDTO the student object to enroll
+     * @param name the name of the course
+     */
     @PostMapping("/{name}/enrollOne")
     @ResponseStatus(HttpStatus.CREATED)
     public void enrollStudent(@Valid @RequestBody StudentDTO studentDTO, @PathVariable String name){
@@ -90,6 +114,12 @@ public class CourseController {
         }
     }
 
+    /**
+     * URL to enroll multiple students to a course
+     * @param file the file where there are the students
+     * @param name the name of the course
+     * @return list of boolean values correspondig to every student
+     */
     @PostMapping("/{name}/enrollMany")
     @ResponseStatus(HttpStatus.CREATED)
     public List<Boolean> enrollStudents(@RequestParam("file") MultipartFile file, @PathVariable String name){
@@ -108,6 +138,11 @@ public class CourseController {
         return teacherService.addAndEroll(reader, name);
     }
 
+    /**
+     * URL to enable a course
+     * @param name the name of the course
+     * @return the course enriched with the  URLs to the course services
+     */
     @PostMapping({"/{name}/enable"})
     public CourseDTO enableCourse(@PathVariable String name){
 
@@ -121,6 +156,11 @@ public class CourseController {
         return modelHelper.enrich(generalService.getCourse(name).get());
     }
 
+    /**
+     * URL to disable a course
+     * @param name the name of the course
+     * @return the course enriched with the  URLs to the course services
+     */
     @PostMapping({"/{name}/disable"})
     public CourseDTO disableCourse(@PathVariable String name){
 
@@ -134,6 +174,11 @@ public class CourseController {
         return modelHelper.enrich(generalService.getCourse(name).get());
     }
 
+    /**
+     * URL to retrieve all the teams for a given course
+     * @param name the name of the course
+     * @return the list of the teams of the course
+     */
     @GetMapping("/{name}/teams")
     public List<TeamDTO> getCourseTeams(@PathVariable String name){
         Optional<CourseDTO> course = generalService.getCourse(name);
@@ -144,6 +189,11 @@ public class CourseController {
         return teacherService.getTeamForCourse(name);
     }
 
+    /**
+     * URL to retrieve all students in a team
+     * @param name the name of the team
+     * @return the list of the students in the team
+     */
     @GetMapping("/{name}/students_in_team")
     public List<StudentDTO> getStudentsInTeams(@PathVariable String name){
         try {
@@ -155,6 +205,11 @@ public class CourseController {
         }
     }
 
+    /**
+     * URL to retrieve all the students of a given course not yet in a team
+     * @param name the name of the course
+     * @return the list of the students of a given course not yet in a team
+     */
     @GetMapping("/{name}/avaiable_students")
     public List<StudentDTO> getAvaiableStudents(@PathVariable String name){
         try {

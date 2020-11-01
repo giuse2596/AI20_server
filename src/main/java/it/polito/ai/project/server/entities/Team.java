@@ -37,7 +37,8 @@ public class Team {
     @NotNull
     private int activeVM;
 
-    // size of this list must be < than activeVM
+    // the size of this list must be < than totVM
+    // and the active virtual machines of the list must be < than activeVM
     @OneToMany( mappedBy = "team")
     List<VirtualMachine> virtualMachines = new ArrayList<>();
 

@@ -2,13 +2,9 @@ package it.polito.ai.project.server.services;
 
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
-import it.polito.ai.project.server.dtos.CourseDTO;
-import it.polito.ai.project.server.dtos.StudentDTO;
-import it.polito.ai.project.server.dtos.TeamDTO;
-import it.polito.ai.project.server.dtos.VirtualMachineDTO;
-import it.polito.ai.project.server.entities.Course;
-import it.polito.ai.project.server.entities.Student;
-import it.polito.ai.project.server.entities.Team;
+import it.polito.ai.project.server.dtos.*;
+import it.polito.ai.project.server.entities.*;
+import it.polito.ai.project.server.repositories.AssignmentRepository;
 import it.polito.ai.project.server.repositories.CourseRepository;
 import it.polito.ai.project.server.repositories.StudentRepository;
 import it.polito.ai.project.server.repositories.TeamRepository;
@@ -19,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.io.Reader;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +30,9 @@ public class TeacherServiceImp implements TeacherService {
 
     @Autowired
     TeamRepository teamRepository;
+
+    @Autowired
+    AssignmentRepository assignmentRepository;
 
     @Autowired
     ModelMapper modelMapper;
@@ -94,18 +94,19 @@ public class TeacherServiceImp implements TeacherService {
      * modify the course attributes
      * @param course   the courseDTO object to modify
      * @param courseId the courseId
-     * @return true if successful;
-     * false otherwise.
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public boolean modifyCourse(String courseId, CourseDTO course) {
+    public void modifyCourse(String courseId, CourseDTO course) {
+        Course courseToUpdate;
+
+        // check if the course exists
         if (!courseRepository.findById(course.getName()).isPresent()) {
-            return false;
+            throw new CourseNotFoundException();
         }
 
         // get the course
-        Course courseToUpdate = courseRepository.findById(courseId).get();
+        courseToUpdate = courseRepository.findById(courseId).get();
 
         // update the course fields
         courseToUpdate.setName(course.getName());
@@ -115,7 +116,6 @@ public class TeacherServiceImp implements TeacherService {
         courseToUpdate.setEnabled(course.isEnabled());
 
         this.courseRepository.save(courseToUpdate);
-        return true;
     }
 
     /**
@@ -365,6 +365,82 @@ public class TeacherServiceImp implements TeacherService {
                         .collect(Collectors.toList()),
                 courseName
         );
+    }
+
+    /**
+     * change the limit of resources available for a team
+     * @param newTeam the team object with the new parameters
+     * @param courseName the name of the course
+     */
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
+    @Override
+    public void changeVMvalues(TeamDTO newTeam, String courseName) {
+        Team teamToUpdate;
+
+        // check if the course exists
+        if(!this.courseRepository.findById(courseName).isPresent()){
+            throw new CourseNotFoundException();
+        }
+
+        // check if the course is enabled
+        if(!this.courseRepository.findById(courseName).get().isEnabled()){
+            throw new TeacherServiceException("The course is not enabled");
+        }
+
+        // check if the team exists
+        if(!this.getTeamForCourse(courseName).contains(this.teamRepository.findById(newTeam.getId()))){
+            throw new TeamNotFoundException();
+        }
+
+        // get the team to update
+        teamToUpdate = this.teamRepository.findById(newTeam.getId()).get();
+
+        // apply the changes to the team
+        teamToUpdate.setCpuMax(newTeam.getCpuMax());
+        teamToUpdate.setRamMax(newTeam.getRamMax());
+        teamToUpdate.setDiskSpaceMax(newTeam.getDiskSpaceMax());
+        teamToUpdate.setTotVM(newTeam.getTotVM());
+        teamToUpdate.setActiveVM(newTeam.getActiveVM());
+
+        this.teamRepository.save(teamToUpdate);
+
+    }
+
+    /**
+     * create an assignment for a course
+     * @param assignment the new assignment
+     * @param courseName course's name to which the assignment refers
+     */
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
+    @Override
+    public void createAssignment(AssignmentDTO assignment, String courseName) {
+        Assignment newAssignemt = new Assignment();
+
+        // check if the course exists
+        if(!this.courseRepository.findById(courseName).isPresent()){
+            throw new CourseNotFoundException();
+        }
+
+        // check if the course is enabled
+        if(!this.courseRepository.findById(courseName).get().isEnabled()){
+            throw new TeacherServiceException("Course not enabled");
+        }
+
+        // check if the name of the assignment already exists
+        if(this.assignmentRepository.findById(assignment.getId()).isPresent()){
+            throw new TeacherServiceException("Assignment already exists");
+        }
+
+        // create the assignment
+        newAssignemt.setId(assignment.getId());
+        newAssignemt.setReleaseDate(assignment.getReleaseDate());
+        newAssignemt.setExpiryDate(assignment.getExpiryDate());
+        newAssignemt.setPathImage(assignment.getPathImage());
+        newAssignemt.setCourse(this.courseRepository.findById(courseName).get());
+
+        // save the assignment
+        this.assignmentRepository.save(newAssignemt);
+
     }
 
 }
