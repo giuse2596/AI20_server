@@ -2,7 +2,6 @@ package it.polito.ai.project.server.dtos;
 
 import lombok.Data;
 
-import javax.validation.constraints.NotBlank;
 
 @Data
 public class TeamDTO {
@@ -11,7 +10,7 @@ public class TeamDTO {
     private String name;
 
     private int status;
-    
+
     private Integer cpuMax;
 
     private Integer ramMax;

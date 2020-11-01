@@ -3,6 +3,7 @@ package it.polito.ai.project.server.services;
 import it.polito.ai.project.server.dtos.CourseDTO;
 import it.polito.ai.project.server.dtos.StudentDTO;
 import it.polito.ai.project.server.dtos.TeamDTO;
+import it.polito.ai.project.server.dtos.VirtualMachineDTO;
 
 import java.io.Reader;
 import java.util.List;
@@ -18,4 +19,5 @@ public interface TeamService {
     List<StudentDTO> getAvailableStudents(String courseName);
     void enableTeam(Long teamId);
     void evictTeam(Long teamId);
+    List<VirtualMachineDTO> getTeamVirtualMachines(Long teamId);
 }

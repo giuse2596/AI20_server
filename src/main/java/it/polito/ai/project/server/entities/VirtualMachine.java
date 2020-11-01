@@ -1,5 +1,6 @@
 package it.polito.ai.project.server.entities;
 
+import lombok.Builder;
 import lombok.Data;
 
 import javax.persistence.*;
@@ -9,10 +10,15 @@ import java.util.List;
 
 @Entity
 @Data
+@Builder
 public class VirtualMachine {
     @Id
     @NotBlank
-    private String id;
+    @GeneratedValue
+    private Long id;
+
+    @NotBlank
+    private String name;
 
     @NotBlank
     private Integer cpu;
@@ -53,7 +59,7 @@ public class VirtualMachine {
         student.getVirtualMachines().add(this);
     }
 
-    public void removeOwer(Student student){
+    public void removeOwner(Student student){
         this.owners.remove(student);
         student.getVirtualMachines().remove(this);
     }

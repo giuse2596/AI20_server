@@ -2,10 +2,7 @@ package it.polito.ai.project.server.entities;
 
 import lombok.Data;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.OneToOne;
+import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +12,8 @@ import java.util.List;
 public class VMModel {
     @Id
     @NotBlank
-    private String id;
+    @GeneratedValue
+    private Long id;
 
     @NotBlank
     private Integer cpuMax;

@@ -5,6 +5,7 @@ import com.opencsv.bean.CsvToBeanBuilder;
 import it.polito.ai.project.server.dtos.CourseDTO;
 import it.polito.ai.project.server.dtos.StudentDTO;
 import it.polito.ai.project.server.dtos.TeamDTO;
+import it.polito.ai.project.server.dtos.VirtualMachineDTO;
 import it.polito.ai.project.server.entities.Course;
 import it.polito.ai.project.server.entities.Student;
 import it.polito.ai.project.server.entities.Team;
@@ -282,6 +283,33 @@ public class TeamServiceImpl implements TeamService {
 
         // remove team from the repository
         this.teamRepository.deleteById(teamId);
+    }
+
+    /**
+     * Retrieve all the team virtual machine
+     * @param teamId the team id
+     * @return all the team virtual machine
+     */
+    public List<VirtualMachineDTO> getTeamVirtualMachines(Long teamId){
+        Course course;
+
+        // check if the team exists
+        if (!this.teamRepository.existsById(teamId)) {
+            throw new TeamNotFoundException();
+        }
+
+        course = this.teamRepository.findById(teamId).get().getCourse();
+
+        // check if the course is enabled
+        if(!course.isEnabled()){
+            throw new StudentServiceException("Course not enabled");
+        }
+
+        return this.teamRepository.findById(teamId).get()
+                .getVirtualMachines()
+                .stream()
+                .map(x -> modelMapper.map(x, VirtualMachineDTO.class))
+                .collect(Collectors.toList());
     }
 
 }

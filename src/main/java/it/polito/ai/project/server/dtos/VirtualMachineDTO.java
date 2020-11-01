@@ -6,7 +6,7 @@ import org.springframework.hateoas.RepresentationModel;
 @Data
 public class VirtualMachineDTO extends RepresentationModel<VirtualMachineDTO> {
 
-    private String id;
+    private Long id;
 
     private Integer cpu;
 
