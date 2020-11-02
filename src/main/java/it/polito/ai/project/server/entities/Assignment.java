@@ -13,7 +13,11 @@ import java.util.List;
 public class Assignment {
     @Id
     @NotBlank
-    private String id;
+    @GeneratedValue
+    private Long id;
+
+    @NotBlank
+    private String name;
 
     @NotBlank
     private Date releaseDate;

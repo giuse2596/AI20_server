@@ -15,8 +15,8 @@ import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.io.Reader;
-import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -99,14 +99,15 @@ public class TeacherServiceImp implements TeacherService {
     @Override
     public void modifyCourse(String courseId, CourseDTO course) {
         Course courseToUpdate;
+        Optional<Course> courseOptional = courseRepository.findById(courseId);
 
         // check if the course exists
-        if (!courseRepository.findById(course.getName()).isPresent()) {
+        if (!courseOptional.isPresent()) {
             throw new CourseNotFoundException();
         }
 
         // get the course
-        courseToUpdate = courseRepository.findById(courseId).get();
+        courseToUpdate = courseOptional.get();
 
         // update the course fields
         courseToUpdate.setName(course.getName());
@@ -125,11 +126,13 @@ public class TeacherServiceImp implements TeacherService {
      */
     @Override
     public List<StudentDTO> getEnrolledStudents(String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+
         // check if the course exists
-        if(!courseRepository.existsById(courseName)){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
-        return courseRepository.findById(courseName)
+        return courseOptional
                 .get()
                 .getStudents()
                 .stream()
@@ -146,25 +149,28 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public boolean addStudentToCourse(String studentId, String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+        Optional<Student> studentOptional = studentRepository.findById(studentId);
+
         // check if the course exist
-        if(!courseRepository.existsById(courseName)){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
         // check if the student exist
-        if(!studentRepository.existsById(studentId)){
+        if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
         // check if the course is enabled
-        if(!courseRepository.findById(courseName).get().isEnabled()){
+        if(!courseOptional.get().isEnabled()){
             return false;
         }
 
         // check if the course already contains the student
         if (
-                courseRepository.findById(courseName)
+               courseOptional
                         .get()
                         .getStudents()
-                        .contains(studentRepository.findById(studentId).get() )
+                        .contains(studentOptional.get() )
         )
         {
             return false;
@@ -172,18 +178,18 @@ public class TeacherServiceImp implements TeacherService {
 
         // check if the student already has the course
         if(
-                studentRepository.findById(studentId)
+                studentOptional
                         .get()
                         .getCourses()
-                        .contains(courseRepository.findById(courseName).get() )
+                        .contains(courseOptional.get() )
         )
         {
             return false;
         }
 
-        courseRepository.findById(courseName)
+        courseOptional
                 .get()
-                .addStudent(studentRepository.findById(studentId).get());
+                .addStudent(studentOptional.get());
         return true;
     }
 
@@ -197,25 +203,28 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public boolean removeStudentToCourse(String studentId, String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+        Optional<Student> studentOptional = studentRepository.findById(studentId);
+
         // check if the course exist
-        if(!courseRepository.existsById(courseName)){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
         // check if the student exist
-        if(!studentRepository.existsById(studentId)){
+        if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
         // check if the course is enabled
-        if(!courseRepository.findById(courseName).get().isEnabled()){
+        if(!courseOptional.get().isEnabled()){
             return false;
         }
 
         // check if the course contains the student
         if (
-                !courseRepository.findById(courseName)
+                !courseOptional
                         .get()
                         .getStudents()
-                        .contains(studentRepository.findById(studentId).get() )
+                        .contains(studentOptional.get() )
         )
         {
             return false;
@@ -223,18 +232,18 @@ public class TeacherServiceImp implements TeacherService {
 
         // check if the student has the course
         if(
-                !studentRepository.findById(studentId)
+                !studentOptional
                         .get()
                         .getCourses()
-                        .contains(courseRepository.findById(courseName).get() )
+                        .contains(courseOptional.get() )
         )
         {
             return false;
         }
 
-        courseRepository.findById(courseName)
+        courseOptional
                 .get()
-                .removeStudent(studentRepository.findById(studentId).get());
+                .removeStudent(studentOptional.get());
         return true;
     }
 
@@ -245,11 +254,13 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public void enableCourse(String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+
         // check if the course exist
-        if(!courseRepository.existsById(courseName)){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
-        courseRepository.findById(courseName)
+        courseOptional
                 .get()
                 .setEnabled(true);
     }
@@ -261,11 +272,13 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public void disableCourse(String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+
         // check if the course exist
-        if(!courseRepository.existsById(courseName)){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
-        courseRepository.findById(courseName)
+        courseOptional
                 .get()
                 .setEnabled(false);
     }
@@ -277,11 +290,13 @@ public class TeacherServiceImp implements TeacherService {
      */
     @Override
     public List<TeamDTO> getTeamForCourse(String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+
         // check if the course exist
-        if(!courseRepository.existsById(courseName)){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
-        return courseRepository.findById(courseName)
+        return courseOptional
                 .get()
                 .getTeams()
                 .stream()
@@ -297,11 +312,13 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public List<VirtualMachineDTO> getVMForTeam(Long teamId) {
+        Optional<Team> teamOptional = teamRepository.findById(teamId);
+
         // check if the team exists
-        if(!teamRepository.findById(teamId).isPresent()){
+        if(!teamOptional.isPresent()){
             throw new TeamNotFoundException();
         }
-        return teamRepository.findById(teamId).get().getVirtualMachines().stream()
+        return teamOptional.get().getVirtualMachines().stream()
                 .map(x -> modelMapper.map(x, VirtualMachineDTO.class))
                 .collect(Collectors.toList());
     }
@@ -375,25 +392,27 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public void changeVMvalues(TeamDTO newTeam, String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+        Optional<Team> teamOptional = teamRepository.findById(newTeam.getId());
         Team teamToUpdate;
 
         // check if the course exists
-        if(!this.courseRepository.findById(courseName).isPresent()){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
 
         // check if the course is enabled
-        if(!this.courseRepository.findById(courseName).get().isEnabled()){
+        if(!courseOptional.get().isEnabled()){
             throw new TeacherServiceException("The course is not enabled");
         }
 
         // check if the team exists
-        if(!this.getTeamForCourse(courseName).contains(this.teamRepository.findById(newTeam.getId()))){
+        if(!teamOptional.isPresent()){
             throw new TeamNotFoundException();
         }
 
         // get the team to update
-        teamToUpdate = this.teamRepository.findById(newTeam.getId()).get();
+        teamToUpdate = teamOptional.get();
 
         // apply the changes to the team
         teamToUpdate.setCpuMax(newTeam.getCpuMax());
@@ -415,28 +434,35 @@ public class TeacherServiceImp implements TeacherService {
     @Override
     public void createAssignment(AssignmentDTO assignment, String courseName) {
         Assignment newAssignemt = new Assignment();
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+        Optional<Assignment> assignmentOptional = assignmentRepository.findById(assignment.getId());
 
         // check if the course exists
-        if(!this.courseRepository.findById(courseName).isPresent()){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
 
         // check if the course is enabled
-        if(!this.courseRepository.findById(courseName).get().isEnabled()){
+        if(!courseOptional.get().isEnabled()){
             throw new TeacherServiceException("Course not enabled");
         }
 
-        // check if the name of the assignment already exists
-        if(this.assignmentRepository.findById(assignment.getId()).isPresent()){
-            throw new TeacherServiceException("Assignment already exists");
+        // check if the name of the assignment already exists in the course
+        if(assignmentRepository.findAll().stream()
+                .sequential()
+                .filter(x -> x.getCourse().getName().equals(courseName))
+                .filter(x -> x.getName().equals(assignment.getName()))
+                .count() > 0
+        ){
+            throw new TeacherServiceException("Assignment name already exists for this course");
         }
 
         // create the assignment
-        newAssignemt.setId(assignment.getId());
+        newAssignemt.setName(assignment.getName());
         newAssignemt.setReleaseDate(assignment.getReleaseDate());
         newAssignemt.setExpiryDate(assignment.getExpiryDate());
         newAssignemt.setPathImage(assignment.getPathImage());
-        newAssignemt.setCourse(this.courseRepository.findById(courseName).get());
+        newAssignemt.setCourse(courseOptional.get());
 
         // save the assignment
         this.assignmentRepository.save(newAssignemt);
