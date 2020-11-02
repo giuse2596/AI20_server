@@ -8,6 +8,8 @@ public class VirtualMachineDTO extends RepresentationModel<VirtualMachineDTO> {
 
     private Long id;
 
+    private String name;
+
     private Integer cpu;
 
     private Integer ram;

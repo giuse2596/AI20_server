@@ -1,7 +1,5 @@
 package it.polito.ai.project.server.services;
 
-import com.opencsv.bean.CsvToBean;
-import com.opencsv.bean.CsvToBeanBuilder;
 import it.polito.ai.project.server.dtos.CourseDTO;
 import it.polito.ai.project.server.dtos.StudentDTO;
 import it.polito.ai.project.server.dtos.TeamDTO;
@@ -19,7 +17,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
-import java.io.Reader;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,13 +59,13 @@ public class TeamServiceImpl implements TeamService {
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
     public List<CourseDTO> getCourses(String studentId) {
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+
         // check if the student exist
-        if(!this.studentRepository.existsById(studentId)){
+        if(!studentOptional.isPresent()){
             return null;
         }
-        return this.studentRepository
-                    .findById(studentId)
-                    .get()
+        return studentOptional.get()
                     .getCourses()
                     .stream()
                     .map(x -> modelMapper.map(x, CourseDTO.class))
@@ -83,34 +80,36 @@ public class TeamServiceImpl implements TeamService {
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
     public List<TeamDTO> getTeamsForStudent(String studentId) {
-        if(!studentRepository.existsById(studentId)){
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+
+        if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
-        return studentRepository.findById(studentId)
-                                .get()
-                                .getTeams()
-                                .stream()
-                                .map(x -> modelMapper.map(x, TeamDTO.class))
-                                .collect(Collectors.toList());
+        return studentOptional.get()
+                            .getTeams()
+                            .stream()
+                            .map(x -> modelMapper.map(x, TeamDTO.class))
+                            .collect(Collectors.toList());
     }
 
     /**
      * Retrieve all the members of an existing team
-     * @param TeamId the team id
+     * @param teamId the team id
      * @return the list of students that belong to the specified team
      */
     @Override
-    public List<StudentDTO> getMembers(Long TeamId) {
+    public List<StudentDTO> getMembers(Long teamId) {
+        Optional<Team> teamOptional = this.teamRepository.findById(teamId);
+
         // check if the team exist
-        if(!teamRepository.existsById(TeamId)){
+        if(!teamOptional.isPresent()){
             throw new TeamNotFoundException();
         }
-        return teamRepository.findById(TeamId)
-                            .get()
-                            .getMembers()
-                            .stream()
-                            .map(x -> modelMapper.map(x, StudentDTO.class))
-                            .collect(Collectors.toList());
+        return teamOptional.get()
+                        .getMembers()
+                        .stream()
+                        .map(x -> modelMapper.map(x, StudentDTO.class))
+                        .collect(Collectors.toList());
     }
 
     /**
@@ -122,59 +121,61 @@ public class TeamServiceImpl implements TeamService {
      */
     @Override
     public TeamDTO proposeTeam(String courseId, String name, List<String> memberIds) {
-        Set<String> setStudents = new HashSet<String>(memberIds);
+        Set<String> setStudents = new HashSet<>(memberIds);
         Team team = new Team();
-        VMModel vmModel = this.courseRepository.findById(courseId).get().getVmModel();
+        VMModel vmModel;
+        Optional<Course> courseOptional = this.courseRepository.findById(courseId);
 
         // check if the course is present
-        if(!courseRepository.existsById(courseId)){
+        if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
 
+        vmModel = courseOptional.get().getVmModel();
+
         // check if all students exist
         if( memberIds.stream()
-                        .map(this.generalService::getStudent)
-                        .filter(x -> !x.isPresent())
-                        .count() > 0)
+                    .map(this.generalService::getStudent)
+                    .filter(x -> !x.isPresent())
+                    .count() > 0)
         {
             throw new StudentNotFoundExeption();
         }
 
         // check if the course is enabled
-        if(!this.generalService.getCourse(courseId).get().isEnabled()){
+        if(!courseOptional.get().isEnabled()){
             throw new TeamServiceException();
         }
 
         // check if all the students are enrolled to the course
         if(
-                !courseRepository.findById(courseId)
-                                    .get()
-                                    .getStudents()
-                                    .stream()
-                                    .map(Student::getId)
-                                    .collect(Collectors.toList())
-                                    .containsAll(memberIds)
+            !courseOptional.get()
+                            .getStudents()
+                            .stream()
+                            .map(Student::getId)
+                            .collect(Collectors.toList())
+                            .containsAll(memberIds)
         ){
             throw new TeamServiceException();
         }
 
         // check if the students are not already part of a team of this course
         if(
-                memberIds.stream()
-                            .map(this::getTeamsForStudent)
-                            .flatMap(x -> x.stream())
-                            .map(x -> teamRepository.findById(x.getId()).get())
-                            .map(x -> x.getCourse().getName())
-                            .collect(Collectors.toList())
-                            .contains(courseId)
+            memberIds.stream()
+                    .map(x -> this.getTeamsForStudent(x))
+                    .flatMap(x -> x.stream())
+                    .map(x -> teamRepository.findById(x.getId()).get())
+                    .map(x -> x.getCourse().getName())
+                    .collect(Collectors.toList())
+                    .contains(courseId)
         ){
             throw new TeamServiceException();
         }
 
         // check if the cardinality is respected
         if(
-                (memberIds.size() < this.generalService.getCourse(courseId).get().getMin()) ||
-                        (memberIds.size() > this.generalService.getCourse(courseId).get().getMax())
+            (memberIds.size() < courseOptional.get().getMin()) ||
+            (memberIds.size() > courseOptional.get().getMax())
         ){
             throw new TeamServiceException();
         }
@@ -186,13 +187,15 @@ public class TeamServiceImpl implements TeamService {
 
         // check if exist other teams with the same name in the course
         if(teacherService.getTeamForCourse(courseId).stream()
-        .filter(x -> x.getName().equals(name)).count() > 0){
+                        .filter(x -> x.getName().equals(name))
+                        .count() > 0
+        ){
             throw new TeamServiceException();
         }
 
         // create the team
         team.setName(name);
-        team.setCourse(courseRepository.findById(courseId).get());
+        team.setCourse(courseOptional.get());
         team.setStatus(memberIds.size());
         team.setMembers(studentRepository.findAll()
                                             .stream()
@@ -256,12 +259,14 @@ public class TeamServiceImpl implements TeamService {
      */
     @Override
     public void enableTeam(Long teamId) {
+        Optional<Team> teamOptional = this.teamRepository.findById(teamId);
+
         // check if the team exist
-        if(!this.teamRepository.existsById(teamId)){
+        if(!teamOptional.isPresent()){
             throw new TeamNotFoundException();
         }
 
-        teamRepository.findById(teamId).get().setStatus(1);
+        teamOptional.get().setStatus(1);
     }
 
     /**
@@ -270,16 +275,15 @@ public class TeamServiceImpl implements TeamService {
      */
     @Override
     public void evictTeam(Long teamId) {
-        Team t;
+        Optional<Team> teamOptional = this.teamRepository.findById(teamId);
+
         // check if the team exist
-        if(!this.teamRepository.existsById(teamId)){
+        if(!teamOptional.isPresent()){
             throw new TeamNotFoundException();
         }
-        t = this.teamRepository.findById(teamId).get();
+
         // remove team from each student
-        this.studentRepository.findAll().stream()
-                .filter(x -> x.getTeams().contains(t))
-                .forEach(x -> x.getTeams().remove(t));
+        teamOptional.get().getMembers().forEach(x -> teamOptional.get().removeMember(x));
 
         // remove team from the repository
         this.teamRepository.deleteById(teamId);
@@ -291,21 +295,19 @@ public class TeamServiceImpl implements TeamService {
      * @return all the team virtual machine
      */
     public List<VirtualMachineDTO> getTeamVirtualMachines(Long teamId){
-        Course course;
+        Optional<Team> teamOptional = this.teamRepository.findById(teamId);
 
         // check if the team exists
-        if (!this.teamRepository.existsById(teamId)) {
+        if (!teamOptional.isPresent()) {
             throw new TeamNotFoundException();
         }
 
-        course = this.teamRepository.findById(teamId).get().getCourse();
-
         // check if the course is enabled
-        if(!course.isEnabled()){
+        if(!teamOptional.get().getCourse().isEnabled()){
             throw new StudentServiceException("Course not enabled");
         }
 
-        return this.teamRepository.findById(teamId).get()
+        return teamOptional.get()
                 .getVirtualMachines()
                 .stream()
                 .map(x -> modelMapper.map(x, VirtualMachineDTO.class))

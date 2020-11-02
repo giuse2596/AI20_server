@@ -1,9 +1,6 @@
 package it.polito.ai.project.server.services;
 
-import it.polito.ai.project.server.dtos.StudentDTO;
-import it.polito.ai.project.server.dtos.TeamDTO;
 import it.polito.ai.project.server.dtos.VirtualMachineDTO;
-import it.polito.ai.project.server.entities.Course;
 import it.polito.ai.project.server.entities.Student;
 import it.polito.ai.project.server.entities.Team;
 import it.polito.ai.project.server.entities.VirtualMachine;
@@ -17,10 +14,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collector;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,28 +50,28 @@ public class StudentServiceImpl implements StudentService{
     @Override
     public void createVirtualMachine(Integer cpu, Integer ram, Integer diskspace,
                                                    String vmName, Long teamId, String owner) {
-        Team team;
+
+        Optional<Team> teamOptional = this.teamRepository.findById(teamId);
+        Optional<Student> studentOptional = this.studentRepository.findById(owner);
         VirtualMachine virtualMachine;
 
         // check if the team exist
-        if(!this.teamRepository.existsById(teamId)){
+        if(!teamOptional.isPresent()){
             throw new TeamNotFoundException();
         }
 
         // check if the student exist
-        if(!this.studentRepository.existsById(owner)){
+        if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
 
-        team = this.teamRepository.findById(teamId).get();
-
         // check if the team is active
-        if(team.getStatus() != 1){
-            throw new StudentServiceException();
+        if(teamOptional.get().getStatus() != 1){
+            throw new StudentServiceException("Team not active");
         }
 
         // check if the student belongs to the team
-        if(team.getMembers()
+        if(teamOptional.get().getMembers()
                 .stream()
                 .filter( x -> x.getId().equals(owner))
                 .count() < 1
@@ -85,23 +80,23 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the student is enrolled to the course
-        if(!team.getCourse().getStudents().contains(this.studentRepository.findById(owner).get())){
-            throw new StudentServiceException();
+        if(!teamOptional.get().getCourse().getStudents().contains(studentOptional.get())){
+            throw new StudentServiceException("Student not enrolled");
         }
 
         // check if the course is enabled
-        if(!team.getCourse().isEnabled()){
-            throw new StudentServiceException();
+        if(!teamOptional.get().getCourse().isEnabled()){
+            throw new StudentServiceException("Course not enabled");
         }
 
         // check if can be created another virtual machine
-        if((team.getVirtualMachines().size() + 1) > team.getTotVM()){
+        if((teamOptional.get().getVirtualMachines().size() + 1) > teamOptional.get().getTotVM()){
             throw new StudentServiceException("Max number virtual machines reached!");
         }
 
         // check if the name is unique for all the team virtual machines
-        if(team.getVirtualMachines().stream()
-                                    .map(x -> x.getName())
+        if(teamOptional.get().getVirtualMachines().stream()
+                                    .map(VirtualMachine::getName)
                                     .collect(Collectors.toList())
                                     .contains(vmName)
         ){
@@ -110,24 +105,24 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the resources given don't exceed
-        if((team.getVirtualMachines()
+        if((teamOptional.get().getVirtualMachines()
                 .stream()
-                .map(x -> x.getCpu())
-                .reduce(0, (a, b) -> a+b) + cpu) > team.getCpuMax()){
+                .map(VirtualMachine::getCpu)
+                .reduce(0, (a, b) -> a+b) + cpu) > teamOptional.get().getCpuMax()){
             throw new StudentServiceException("Cpu limit exceeded");
         }
 
-        if((team.getVirtualMachines()
+        if((teamOptional.get().getVirtualMachines()
                 .stream()
-                .map(x -> x.getRam())
-                .reduce(0, (a, b) -> a+b) + ram) > team.getRamMax()){
+                .map(VirtualMachine::getRam)
+                .reduce(0, (a, b) -> a+b) + ram) > teamOptional.get().getRamMax()){
             throw new StudentServiceException("RAM limit exceeded");
         }
 
-        if((team.getVirtualMachines()
+        if((teamOptional.get().getVirtualMachines()
                 .stream()
-                .map(x -> x.getDiskSpace())
-                .reduce(0, (a, b) -> a+b) + diskspace)> team.getDiskSpaceMax()){
+                .map(VirtualMachine::getDiskSpace)
+                .reduce(0, (a, b) -> a+b) + diskspace)> teamOptional.get().getDiskSpaceMax()){
             throw new StudentServiceException("Disk space limit exceeded");
         }
 
@@ -140,8 +135,8 @@ public class StudentServiceImpl implements StudentService{
                                         .active(false)
                                         .build();
 
-        virtualMachine.setTeam(team);
-        virtualMachine.addOwner(studentRepository.findById(owner).get());
+        virtualMachine.setTeam(teamOptional.get());
+        virtualMachine.addOwner(studentOptional.get());
 
         this.virtualMachinesRepository.save(virtualMachine);
     }
@@ -153,36 +148,35 @@ public class StudentServiceImpl implements StudentService{
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     public void startVirtualMachine(Long vmId, String studentId){
-        VirtualMachine virtualMachine;
+        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
 
         // check if the vm exist
-        if(!this.virtualMachinesRepository.existsById(vmId)){
+        if(!virtualMachineOptional.isPresent()){
             throw new StudentServiceException();
         }
 
         // check if the student exist
-        if(!this.studentRepository.existsById(studentId)){
+        if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
 
-        virtualMachine = this.virtualMachinesRepository.findById(vmId).get();
-
         // check if the course is enabled
-        if(!virtualMachine.getTeam().getCourse().isEnabled()){
+        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()) {
             throw new StudentServiceException("Course not enabled");
         }
 
         // check if the student is one of the owner of the virtual machine
-        if (virtualMachine.getOwners()
+        if (virtualMachineOptional.get().getOwners()
                             .stream()
-                            .map(x -> x.getId())
+                            .map(Student::getId)
                             .filter( x -> x.equals(studentId))
                             .count() < 1
         ) {
-            throw new StudentServiceException();
+            throw new StudentServiceException("The student is not one of the vm owners");
         }
 
-        virtualMachine.setActive(true);
+        virtualMachineOptional.get().setActive(true);
     }
 
     /**
@@ -192,36 +186,35 @@ public class StudentServiceImpl implements StudentService{
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     public void stopVirtualMachine(Long vmId, String studentId){
-        VirtualMachine virtualMachine;
+        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
 
         // check if the vm exist
-        if(!this.virtualMachinesRepository.existsById(vmId)){
+        if(!virtualMachineOptional.isPresent()){
             throw new StudentServiceException();
         }
 
         // check if the student exist
-        if(!this.studentRepository.existsById(studentId)){
+        if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
 
-        virtualMachine = this.virtualMachinesRepository.findById(vmId).get();
-
         // check if the course is enabled
-        if(!virtualMachine.getTeam().getCourse().isEnabled()){
+        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
             throw new StudentServiceException("Course not enabled");
         }
 
         // check if the student is one of the owner of the virtual machine
-        if (virtualMachine.getOwners()
+        if (virtualMachineOptional.get().getOwners()
                 .stream()
                 .map(x -> x.getId())
                 .filter( x -> x.equals(studentId))
                 .count() < 1
         ) {
-            throw new StudentServiceException();
+            throw new StudentServiceException("The student is not one of the vm owners");
         }
 
-        virtualMachine.setActive(false);
+        virtualMachineOptional.get().setActive(false);
     }
 
     /**
@@ -231,22 +224,21 @@ public class StudentServiceImpl implements StudentService{
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     public void deleteVirtualMachine(Long vmId, String studentId){
-        VirtualMachine virtualMachine;
+        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
 
         // check if the vm exist
-        if(!this.virtualMachinesRepository.existsById(vmId)){
+        if(!virtualMachineOptional.isPresent()){
             throw new StudentServiceException();
         }
 
         // check if the student exist
-        if(!this.studentRepository.existsById(studentId)){
+        if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
 
-        virtualMachine = this.virtualMachinesRepository.findById(vmId).get();
-
         // check if the student is one of the owner of the virtual machine
-        if (!virtualMachine.getOwners()
+        if (!virtualMachineOptional.get().getOwners()
                 .stream()
                 .map(x -> x.getId())
                 .collect(Collectors.toList())
@@ -256,8 +248,10 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // delete the virtual machine from all the students and the team
-        virtualMachine.getOwners().stream().forEach(x -> virtualMachine.removeOwner(x));
-        virtualMachine.setTeam(null);
+        virtualMachineOptional.get()
+                            .getOwners()
+                            .forEach(x -> virtualMachineOptional.get().removeOwner(x));
+        virtualMachineOptional.get().setTeam(null);
         this.virtualMachinesRepository.deleteById(vmId);
     }
 
@@ -269,9 +263,11 @@ public class StudentServiceImpl implements StudentService{
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     public void addVirtualMachineOwners(String owner, List<String> students, Long vmId){
+        Optional<Student> studentOptional = this.studentRepository.findById(owner);
+        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
 
         // check if the owner exist
-        if(!this.studentRepository.existsById(owner)){
+        if(!studentOptional.isPresent()){
             throw new StudentServiceException("Owner doesn't exist");
 
         }
@@ -285,20 +281,20 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the vm exist
-        if(!this.virtualMachinesRepository.existsById(vmId)){
+        if(!virtualMachineOptional.isPresent()){
             throw new StudentServiceException("The virtual machine doesn't exist");
         }
 
         // check if the owner is present in the owner list
-        if(!this.virtualMachinesRepository.findById(vmId).get()
+        if(!virtualMachineOptional.get()
                 .getOwners()
-                .contains(this.studentRepository.findById(owner).get())
+                .contains(studentOptional.get())
         ){
             throw new StudentServiceException("The student is not the owner of the virtual machine");
         }
 
         // check if the course is enabled
-        if(!this.virtualMachinesRepository.findById(vmId).get().getTeam().getCourse().isEnabled()){
+        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
             throw new StudentServiceException("Course not enabled");
         }
 
@@ -306,7 +302,7 @@ public class StudentServiceImpl implements StudentService{
         students.stream()
                 .map(x -> this.studentRepository.findById(x).get())
                 .forEach(
-                        x -> this.virtualMachinesRepository.findById(vmId).get().addOwner(x)
+                        x -> virtualMachineOptional.get().addOwner(x)
                 );
     }
 
@@ -317,23 +313,25 @@ public class StudentServiceImpl implements StudentService{
      * @return the virtual machine DTO
      */
     public VirtualMachineDTO getVirtualMachine(String studentId, Long vmId){
+        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
 
         // check if the student exists
-        if(!this.studentRepository.existsById(studentId)){
+        if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
 
         // check if the vm exists
-        if(!this.virtualMachinesRepository.existsById(vmId)){
+        if(!virtualMachineOptional.isPresent()){
             throw new StudentServiceException("Virtual machine doesn't exist");
         }
 
         // check if the course is enabled
-        if(!this.virtualMachinesRepository.findById(vmId).get().getTeam().getCourse().isEnabled()){
+        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
             throw new StudentServiceException("Course not enabled");
         }
 
-        return this.modelMapper.map(this.virtualMachinesRepository.findById(vmId).get(),
+        return this.modelMapper.map(virtualMachineOptional.get(),
                                     VirtualMachineDTO.class);
     }
 
