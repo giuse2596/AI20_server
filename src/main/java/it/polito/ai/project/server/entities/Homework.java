@@ -10,7 +10,6 @@ import javax.validation.constraints.NotBlank;
 public class Homework {
 
     public enum Status{
-        NULL,
         READ,
         DELIVERED,
         REVIEWED
@@ -26,6 +25,8 @@ public class Homework {
     @NotBlank
     @Enumerated(EnumType.ORDINAL)
     private Status status;
+
+    private Integer mark;
 
     @ManyToOne
     @JoinColumn(name= "student_id")

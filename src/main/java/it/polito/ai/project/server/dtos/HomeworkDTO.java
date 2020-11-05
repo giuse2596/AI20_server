@@ -12,4 +12,6 @@ public class HomeworkDTO extends RepresentationModel<HomeworkDTO> {
 
     private String status;
 
+    private Integer mark;
+
 }
