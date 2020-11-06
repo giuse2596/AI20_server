@@ -30,12 +30,19 @@ public class Teacher {
     @NotBlank
     private Long userId;
 
-    @OneToMany(mappedBy = "teacher")
-    List<Course> courses = new ArrayList<Course>();
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(name="teacher_course", joinColumns = @JoinColumn(name="teacher_id"),
+            inverseJoinColumns = @JoinColumn(name="course_name") )
+    List<Course> courses = new ArrayList<>();
 
     public void addCourse(Course course){
         this.courses.add(course);
-        course.teacher = this;
+        course.getTeachers().add(this);
+    }
+
+    public void removeCourse(Course course){
+        this.courses.remove(course);
+        course.getTeachers().remove(this);
     }
 
 }

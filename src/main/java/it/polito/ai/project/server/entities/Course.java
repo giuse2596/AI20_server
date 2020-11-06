@@ -27,9 +27,8 @@ public class Course {
     @NotBlank
     private boolean enabled;
 
-    @ManyToOne
-    @JoinColumn(name= "teacher_id")
-    Teacher teacher;
+    @ManyToMany(mappedBy = "courses")
+    List<Teacher> teachers = new ArrayList<>();
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "vmModel_id", referencedColumnName = "id")
@@ -44,16 +43,14 @@ public class Course {
     @OneToMany(mappedBy = "course")
     List<Assignment> assignments = new ArrayList<>();
 
-    public void setTeacher(Teacher teacher){
-        if(teacher == null){
-            if(this.teacher != null){
-                this.teacher.getCourses().remove(this);
-            }
-        }
-        else{
-            this.teacher.getCourses().add(this);
-        }
-        this.teacher = teacher;
+    public void addTeacher(Teacher teacher){
+        this.teachers.add(teacher);
+        teacher.getCourses().add(this);
+    }
+
+    public void removeTeacher(Teacher teacher){
+        this.teachers.remove(teacher);
+        teacher.getCourses().remove(this);
     }
 
     public void setVMModel(VMModel vmModel){
