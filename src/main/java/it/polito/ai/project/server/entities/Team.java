@@ -19,6 +19,9 @@ public class Team {
     @NotBlank
     private String name;
 
+    @NotBlank
+    private String proposer;
+
     @NotNull
     private int status;
 

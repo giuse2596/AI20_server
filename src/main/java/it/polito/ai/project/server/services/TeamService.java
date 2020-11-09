@@ -14,7 +14,7 @@ public interface TeamService {
     List<CourseDTO> getCourses(String studentId);
     List<TeamDTO> getTeamsForStudent(String studentId);
     List<StudentDTO>getMembers(Long teamId);
-    TeamDTO proposeTeam(String courseId, String name, List<String> memberIds);
+    TeamDTO proposeTeam(String courseId, String name, String proposer, List<String> memberIds);
     List<StudentDTO> getStudentsInTeams(String courseName);
     List<StudentDTO> getAvailableStudents(String courseName);
     void enableTeam(Long teamId);

@@ -39,13 +39,14 @@ public class NotificationController {
     public void notify(
                         @PathVariable String courseName,
                         @PathVariable String team,
+                        @RequestBody String proposer,
                         @RequestBody List<String> students
                     )
     {
         TeamDTO teamDTO;
 
         try {
-            teamDTO = teamService.proposeTeam(courseName, team, students);
+            teamDTO = teamService.proposeTeam(courseName, team, proposer, students);
         }
         catch (TeamServiceException e){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());

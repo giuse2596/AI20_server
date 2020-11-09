@@ -61,7 +61,7 @@ public class TeamServiceImpl implements TeamService {
     public List<CourseDTO> getCourses(String studentId) {
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
 
-        // check if the student exist
+        // check if the student exists
         if(!studentOptional.isPresent()){
             return null;
         }
@@ -82,6 +82,7 @@ public class TeamServiceImpl implements TeamService {
     public List<TeamDTO> getTeamsForStudent(String studentId) {
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
 
+        // check if the student exists
         if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
@@ -116,15 +117,20 @@ public class TeamServiceImpl implements TeamService {
      * Propose a team for an existing course
      * @param courseId course id to which the proposed team belongs
      * @param name team name
-     * @param memberIds list of students proposed for the team
+     * @param proposer id of the student who proposed the team, is
+     *                 included in the memberIds list
+     * @param memberIds list of students proposed for the team,
+     *                  include the proposer
      * @return the TeamDTO object
      */
     @Override
-    public TeamDTO proposeTeam(String courseId, String name, List<String> memberIds) {
+    public TeamDTO proposeTeam(String courseId, String name, String proposer, List<String> memberIds) {
         Set<String> setStudents = new HashSet<>(memberIds);
         Team team = new Team();
         VMModel vmModel;
         Optional<Course> courseOptional = this.courseRepository.findById(courseId);
+        List<Optional<Student>> optionalStudentList = new ArrayList<>();
+        List<Student> studentsInTeam;
 
         // check if the course is present
         if(!courseOptional.isPresent()){
@@ -132,13 +138,11 @@ public class TeamServiceImpl implements TeamService {
         }
 
         vmModel = courseOptional.get().getVmModel();
+        studentsInTeam = this.courseRepository.getStudentsInTeams(courseId);
 
         // check if all students exist
-        if( memberIds.stream()
-                    .map(this.generalService::getStudent)
-                    .filter(x -> !x.isPresent())
-                    .count() > 0)
-        {
+        memberIds.forEach(x -> optionalStudentList.add(this.studentRepository.findById(x)));
+        if (optionalStudentList.stream().anyMatch(x -> !x.isPresent()) ) {
             throw new StudentNotFoundExeption();
         }
 
@@ -148,26 +152,17 @@ public class TeamServiceImpl implements TeamService {
         }
 
         // check if all the students are enrolled to the course
-        if(
-            !courseOptional.get()
-                            .getStudents()
-                            .stream()
-                            .map(Student::getId)
-                            .collect(Collectors.toList())
-                            .containsAll(memberIds)
-        ){
+        if (
+            optionalStudentList.stream()
+                    .anyMatch(x -> !x.get().getCourses().contains(courseOptional.get()))
+        ) {
             throw new TeamServiceException();
         }
 
         // check if the students are not already part of a team of this course
         if(
-            memberIds.stream()
-                    .map(x -> this.getTeamsForStudent(x))
-                    .flatMap(x -> x.stream())
-                    .map(x -> teamRepository.findById(x.getId()).get())
-                    .map(x -> x.getCourse().getName())
-                    .collect(Collectors.toList())
-                    .contains(courseId)
+            optionalStudentList.stream().map(x -> x.get().getId())
+            .anyMatch(x -> studentsInTeam.contains(x))
         ){
             throw new TeamServiceException();
         }
@@ -187,21 +182,17 @@ public class TeamServiceImpl implements TeamService {
 
         // check if exist other teams with the same name in the course
         if(teacherService.getTeamForCourse(courseId).stream()
-                        .filter(x -> x.getName().equals(name))
-                        .count() > 0
+                            .anyMatch(x -> x.getName().equals(name))
         ){
             throw new TeamServiceException();
         }
 
         // create the team
         team.setName(name);
-        team.setCourse(courseOptional.get());
+        team.setProposer(proposer);
         team.setStatus(memberIds.size());
-        team.setMembers(studentRepository.findAll()
-                                            .stream()
-                                            .filter(x -> memberIds.contains(x.getId()))
-                                            .collect(Collectors.toList())
-                        );
+        team.setCourse(courseOptional.get());
+        team.setMembers(optionalStudentList.stream().map(x -> x.get()).collect(Collectors.toList()));
 
         // set resources limit for the team
         team.setCpuMax(vmModel.getCpuMax());

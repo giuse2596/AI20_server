@@ -9,6 +9,8 @@ public class TeamDTO {
 
     private String name;
 
+    private String proposer;
+
     private int status;
 
     private Integer cpuMax;
