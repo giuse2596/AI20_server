@@ -4,13 +4,11 @@ import it.polito.ai.project.server.dtos.CourseDTO;
 import it.polito.ai.project.server.dtos.StudentDTO;
 import it.polito.ai.project.server.dtos.TeamDTO;
 import it.polito.ai.project.server.dtos.VirtualMachineDTO;
-import it.polito.ai.project.server.entities.Course;
-import it.polito.ai.project.server.entities.Student;
-import it.polito.ai.project.server.entities.Team;
-import it.polito.ai.project.server.entities.VMModel;
+import it.polito.ai.project.server.entities.*;
 import it.polito.ai.project.server.repositories.CourseRepository;
 import it.polito.ai.project.server.repositories.StudentRepository;
 import it.polito.ai.project.server.repositories.TeamRepository;
+import it.polito.ai.project.server.repositories.VirtualMachinesRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -33,9 +31,12 @@ public class TeamServiceImpl implements TeamService {
     TeamRepository teamRepository;
 
     @Autowired
+    VirtualMachinesRepository virtualMachinesRepository;
+
+    @Autowired
     ModelMapper modelMapper;
 
-    GeneralServiceImpl generalService;
+    StudentServiceImpl studentService;
 
     TeacherServiceImp teacherService;
 
@@ -267,11 +268,27 @@ public class TeamServiceImpl implements TeamService {
     @Override
     public void evictTeam(Long teamId) {
         Optional<Team> teamOptional = this.teamRepository.findById(teamId);
+        List<VirtualMachine> tempvirtualmachines;
 
         // check if the team exist
         if(!teamOptional.isPresent()){
             throw new TeamNotFoundException();
         }
+
+        // store all the virtual machines to remove
+        tempvirtualmachines = this.virtualMachinesRepository.findAll()
+                                .stream()
+                                .filter(x -> x.getTeam().getId().equals(teamId))
+                                .collect(Collectors.toList());
+
+        // delete the relation between the virtual machine of the team and the students
+        tempvirtualmachines.forEach(x -> x.getOwners().forEach(x::removeOwner));
+
+        // delete the team from the virtual machine
+        tempvirtualmachines.forEach(x -> x.setTeam(null));
+
+        // remove the virtual machine from the repository
+        tempvirtualmachines.forEach(x -> this.virtualMachinesRepository.deleteById(x.getId()));
 
         // remove team from each student
         teamOptional.get().getMembers().forEach(x -> teamOptional.get().removeMember(x));

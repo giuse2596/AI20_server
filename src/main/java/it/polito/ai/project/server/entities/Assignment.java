@@ -40,6 +40,11 @@ public class Assignment {
         homework.assignment = this;
     }
 
+    public void removeHomework(Homework homework){
+        this.homeworks.remove(homework);
+        homework.assignment = null;
+    }
+
     public void setCourse(Course course){
         if(course == null){
             if(this.course != null) {

@@ -90,4 +90,9 @@ public class Course {
         assignment.course = this;
     }
 
+    public void removeAssignment(Assignment assignment){
+        this.assignments.remove(assignment);
+        assignment.course = null;
+    }
+
 }

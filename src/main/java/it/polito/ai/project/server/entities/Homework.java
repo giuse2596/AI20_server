@@ -4,27 +4,17 @@ import lombok.Data;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
 public class Homework {
 
-    public enum Status{
-        READ,
-        DELIVERED,
-        REVIEWED
-    }
-
     @Id
+    @GeneratedValue
     @NotBlank
-    private String id;
-
-    @NotBlank
-    private String pathImage;
-
-    @NotBlank
-    @Enumerated(EnumType.ORDINAL)
-    private Status status;
+    private Long id;
 
     private Integer mark;
 
@@ -35,6 +25,9 @@ public class Homework {
     @ManyToOne
     @JoinColumn(name= "assignment_id")
     Assignment assignment;
+
+    @OneToMany(mappedBy = "homework")
+    List<Delivery> deliveries = new ArrayList<>();
 
     public void setStudent(Student student){
         if(student == null){
@@ -59,4 +52,15 @@ public class Homework {
         }
         this.assignment = assignment;
     }
+
+    public void addDelivery(Delivery delivery){
+        this.deliveries.add(delivery);
+        delivery.homework = this;
+    }
+
+    public void removeDelivery(Delivery delivery){
+        this.deliveries.remove(delivery);
+        delivery.homework = null;
+    }
+
 }

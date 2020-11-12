@@ -19,10 +19,10 @@ public interface TeacherService {
     void enableCourse(String courseName);
     void disableCourse(String courseName);
     List<TeamDTO> getTeamForCourse(String courseName);
-    List<VirtualMachineDTO> getVMForTeam(Long teamId); // use the getTeamForCourse function
     List<Boolean> addAll(List<StudentDTO> students);
     List<Boolean> enrollAll(List<String> studentIds, String courseName);
     List<Boolean> addAndEroll(Reader r, String courseName);
     void changeVMvalues(TeamDTO newTeam, String courseName);
     void createAssignment(AssignmentDTO assignment, String courseName);
+    void removeAssignment(AssignmentDTO assignment, String courseName);
 }

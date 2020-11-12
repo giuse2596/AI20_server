@@ -4,10 +4,7 @@ import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import it.polito.ai.project.server.dtos.*;
 import it.polito.ai.project.server.entities.*;
-import it.polito.ai.project.server.repositories.AssignmentRepository;
-import it.polito.ai.project.server.repositories.CourseRepository;
-import it.polito.ai.project.server.repositories.StudentRepository;
-import it.polito.ai.project.server.repositories.TeamRepository;
+import it.polito.ai.project.server.repositories.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,7 +34,18 @@ public class TeacherServiceImp implements TeacherService {
     @Autowired
     ModelMapper modelMapper;
 
+    @Autowired
+    VMModelRepository vmModelRepository;
+
+    @Autowired
+    HomeworkRepository homeworkRepository;
+
+    @Autowired
+    DeliveryRepository deliveryRepository;
+
     GeneralServiceImpl generalService;
+
+    TeamServiceImpl teamService;
 
     /**
      * Add a new student
@@ -82,11 +90,39 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public boolean removeCourse(CourseDTO course) {
+        Optional<Course> courseOptional = this.courseRepository.findById(course.getName());
+        VMModel tempvm;
+
         // check if the course exists
-        if (!(this.courseRepository.findById(course.getName()).isPresent())) {
+        if (!(courseOptional.isPresent())) {
             return false;
         }
+
+        // removing the students from the course
+        courseOptional.get().getStudents().forEach(x -> courseOptional.get().removeStudent(x));
+
+        // removing the teachers from the course
+        courseOptional.get().getTeachers().forEach(x -> courseOptional.get().removeTeacher(x));
+
+        // storing the virtual machine to remove
+        tempvm = this.vmModelRepository.findById(courseOptional.get().getVmModel().getId()).get();
+
+        // removing the virtual machine model from the course
+        courseOptional.get().setVMModel(null);
+
+        // removing the VM model from the repository
+        this.vmModelRepository.deleteById(tempvm.getId());
+
+        // removing the assignments from the course
+        courseOptional.get().getAssignments().stream()
+                .map(x -> modelMapper.map(x, AssignmentDTO.class))
+                .forEach(x -> removeAssignment(x, courseOptional.get().getName()));
+
+        // removing the teams from the course
+        courseOptional.get().getTeams().forEach(x -> this.teamService.evictTeam(x.getId()));
+
         this.courseRepository.deleteById(course.getName());
+
         return true;
     }
 
@@ -305,25 +341,6 @@ public class TeacherServiceImp implements TeacherService {
     }
 
     /**
-     * get the VM of a team
-     * @param teamId the team id
-     * @return the virtual machine of the team
-     */
-    @PreAuthorize("hasRole('ROLE_TEACHER')")
-    @Override
-    public List<VirtualMachineDTO> getVMForTeam(Long teamId) {
-        Optional<Team> teamOptional = teamRepository.findById(teamId);
-
-        // check if the team exists
-        if(!teamOptional.isPresent()){
-            throw new TeamNotFoundException();
-        }
-        return teamOptional.get().getVirtualMachines().stream()
-                .map(x -> modelMapper.map(x, VirtualMachineDTO.class))
-                .collect(Collectors.toList());
-    }
-
-    /**
      * Add a list of new students
      * @param students the list of new students to add
      * @return a boolean list, the value of the list is true if the
@@ -435,7 +452,6 @@ public class TeacherServiceImp implements TeacherService {
     public void createAssignment(AssignmentDTO assignment, String courseName) {
         Assignment newAssignemt = new Assignment();
         Optional<Course> courseOptional = courseRepository.findById(courseName);
-        Optional<Assignment> assignmentOptional = assignmentRepository.findById(assignment.getId());
 
         // check if the course exists
         if(!courseOptional.isPresent()){
@@ -449,7 +465,6 @@ public class TeacherServiceImp implements TeacherService {
 
         // check if the name of the assignment already exists in the course
         if(assignmentRepository.findAll().stream()
-                .sequential()
                 .filter(x -> x.getCourse().getName().equals(courseName))
                 .filter(x -> x.getName().equals(assignment.getName()))
                 .count() > 0
@@ -466,6 +481,60 @@ public class TeacherServiceImp implements TeacherService {
 
         // save the assignment
         this.assignmentRepository.save(newAssignemt);
+
+    }
+
+    /**
+     * remore an assignment and all relations with other entities
+     * @param assignment the assignment to remove
+     * @param courseName the course to which the assignment belongs
+     */
+    @Override
+    public void removeAssignment(AssignmentDTO assignment, String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+        Optional<Assignment> assignmentOptional = assignmentRepository.findById(assignment.getId());
+        List<Delivery> tempdeliveries;
+        List<Homework> temphomeworks;
+
+        // check if the course exists
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
+        }
+
+        // check if the assignment exists
+        if(!assignmentOptional.isPresent()){
+            throw new TeacherServiceException("Assignment does not exists");
+        }
+
+        // store the deliveries to remove
+        tempdeliveries = assignmentOptional.get().getHomeworks()
+                            .stream()
+                            .flatMap(x -> x.getDeliveries().stream())
+                            .collect(Collectors.toList());
+
+        // remove the deliveries from the homework
+        tempdeliveries.forEach(x -> x.setHomework(null));
+
+        // remove all deliveries form the repository
+        tempdeliveries.forEach(x -> this.deliveryRepository.deleteById(x.getId()));
+
+        // store the homeworks to remove
+        temphomeworks = assignmentOptional.get().getHomeworks();
+
+        // remove the homeworks from the student
+        temphomeworks.forEach(x -> x.getStudent().removeHomework(x));
+
+        // remove homeworks from the assignment
+        temphomeworks.forEach(x -> assignmentOptional.get().removeHomework(x));
+
+        // remove the homwork from the repository
+        temphomeworks.forEach(x -> this.homeworkRepository.deleteById(x.getId()));
+
+        // remove the course from the assignment
+        assignmentOptional.get().setCourse(null);
+
+        // remove the assignment
+        assignmentRepository.deleteById(assignment.getId());
 
     }
 

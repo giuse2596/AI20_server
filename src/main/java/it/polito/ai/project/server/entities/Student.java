@@ -79,4 +79,9 @@ public class Student {
         homework.student = this;
     }
 
+    public void removeHomework(Homework homework){
+        this.homeworks.remove(homework);
+        homework.student = null;
+    }
+
 }
