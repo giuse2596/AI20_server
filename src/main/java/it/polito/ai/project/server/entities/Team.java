@@ -4,6 +4,7 @@ import lombok.Data;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,22 +23,22 @@ public class Team {
     @NotBlank
     private String proposer;
 
-    @NotNull
-    private int status;
+    @NotEmpty
+    private Integer status;
 
-    @NotBlank
+    @NotEmpty
     private Integer cpuMax;
 
-    @NotBlank
+    @NotEmpty
     private Integer ramMax;
 
-    @NotBlank
+    @NotEmpty
     private Integer diskSpaceMax;
 
-    @NotNull
+    @NotEmpty
     private int totVM;
 
-    @NotNull
+    @NotEmpty
     private int activeVM;
 
     // the size of this list must be < than totVM

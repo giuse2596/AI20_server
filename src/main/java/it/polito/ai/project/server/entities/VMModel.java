@@ -4,6 +4,7 @@ import lombok.Data;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,23 +12,22 @@ import java.util.List;
 @Data
 public class VMModel {
     @Id
-    @NotBlank
     @GeneratedValue
     private Long id;
 
-    @NotBlank
+    @NotEmpty
     private Integer cpuMax;
 
-    @NotBlank
+    @NotEmpty
     private Integer ramMax;
 
-    @NotBlank
+    @NotEmpty
     private Integer diskSpaceMax;
 
-    @NotBlank
+    @NotEmpty
     private Integer totalInstances;
 
-    @NotBlank
+    @NotEmpty
     private Integer activeInstances;
 
     @OneToOne( mappedBy = "vmModel")

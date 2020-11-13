@@ -11,7 +11,7 @@ public class TeamDTO {
 
     private String proposer;
 
-    private int status;
+    private Integer status;
 
     private Integer cpuMax;
 

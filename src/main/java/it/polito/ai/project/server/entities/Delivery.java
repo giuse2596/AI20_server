@@ -4,6 +4,8 @@ import lombok.Data;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.sql.Timestamp;
 
 @Entity
@@ -21,7 +23,7 @@ public class Delivery {
     @GeneratedValue
     private Long id;
 
-    @NotBlank
+    @NotEmpty
     @Enumerated(EnumType.ORDINAL)
     private Status status;
 
@@ -29,7 +31,7 @@ public class Delivery {
     @NotBlank
     private String pathImage;
 
-    @NotBlank
+    @NotEmpty
     private Timestamp timestamp;
 
     @ManyToOne

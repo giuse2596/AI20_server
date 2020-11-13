@@ -4,6 +4,8 @@ import lombok.Data;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -12,17 +14,16 @@ import java.util.List;
 @Data
 public class Assignment {
     @Id
-    @NotBlank
     @GeneratedValue
     private Long id;
 
     @NotBlank
     private String name;
 
-    @NotBlank
+    @NotEmpty
     private Date releaseDate;
 
-    @NotBlank
+    @NotEmpty
     private Date expiryDate;
 
     @NotBlank

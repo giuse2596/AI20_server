@@ -4,6 +4,8 @@ import lombok.Data;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,13 +20,13 @@ public class Course {
     @NotBlank
     private String acronym;
 
-    @NotBlank
+    @NotEmpty
     private Integer min;
 
-    @NotBlank
+    @NotEmpty
     private Integer max;
 
-    @NotBlank
+    @NotEmpty
     private boolean enabled;
 
     @ManyToMany(mappedBy = "courses")

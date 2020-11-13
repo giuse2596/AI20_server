@@ -16,5 +16,5 @@ public class VirtualMachineDTO extends RepresentationModel<VirtualMachineDTO> {
 
     private Integer diskSpace;
 
-    private Boolean active;
+    private boolean active;
 }

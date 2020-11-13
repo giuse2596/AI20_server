@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,25 +14,24 @@ import java.util.List;
 @Builder
 public class VirtualMachine {
     @Id
-    @NotBlank
     @GeneratedValue
     private Long id;
 
     @NotBlank
     private String name;
 
-    @NotBlank
+    @NotEmpty
     private Integer cpu;
 
-    @NotBlank
+    @NotEmpty
     private Integer ram;
 
-    @NotBlank
+    @NotEmpty
     private Integer diskSpace;
 
     // status virtual machine
     @NotBlank
-    private Boolean active = false;
+    private boolean active;
 
     @ManyToOne
     @JoinColumn(name= "team_id")
