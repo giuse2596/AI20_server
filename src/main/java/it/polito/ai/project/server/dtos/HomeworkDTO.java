@@ -6,7 +6,7 @@ import org.springframework.hateoas.RepresentationModel;
 @Data
 public class HomeworkDTO extends RepresentationModel<HomeworkDTO> {
 
-    private String id;
+    private Long id;
 
     private Integer mark;
 
