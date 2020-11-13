@@ -8,10 +8,7 @@ public class HomeworkDTO extends RepresentationModel<HomeworkDTO> {
 
     private String id;
 
-    private String pathImage;
-
-    private String status;
-
     private Integer mark;
 
+    private boolean editable;
 }
