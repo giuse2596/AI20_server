@@ -1,19 +1,21 @@
 package it.polito.ai.project.server.services;
 
+import it.polito.ai.project.server.dtos.DeliveryDTO;
+import it.polito.ai.project.server.dtos.HomeworkDTO;
 import it.polito.ai.project.server.dtos.VirtualMachineDTO;
-import it.polito.ai.project.server.entities.Student;
-import it.polito.ai.project.server.entities.Team;
-import it.polito.ai.project.server.entities.VirtualMachine;
-import it.polito.ai.project.server.repositories.CourseRepository;
-import it.polito.ai.project.server.repositories.StudentRepository;
-import it.polito.ai.project.server.repositories.TeamRepository;
-import it.polito.ai.project.server.repositories.VirtualMachinesRepository;
+import it.polito.ai.project.server.entities.*;
+import it.polito.ai.project.server.repositories.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.transaction.Transactional;
+import java.io.File;
+import java.io.IOException;
+import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -33,6 +35,12 @@ public class StudentServiceImpl implements StudentService{
 
     @Autowired
     CourseRepository courseRepository;
+
+    @Autowired
+    HomeworkRepository homeworkRepository;
+
+    @Autowired
+    DeliveryRepository deliveryRepository;
 
     @Autowired
     ModelMapper modelMapper;
@@ -146,6 +154,7 @@ public class StudentServiceImpl implements StudentService{
      * @param virtualMachineDTO the DTO with the new resources
      * @param owner one of the owners of the virtual machine
      */
+    @Override
     public void changeVirtualMachineParameters(VirtualMachineDTO virtualMachineDTO, String owner){
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository
                                                                 .findById(virtualMachineDTO.getId());
@@ -218,6 +227,7 @@ public class StudentServiceImpl implements StudentService{
      * @param studentId student id
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @Override
     public void startVirtualMachine(Long vmId, String studentId){
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
@@ -261,6 +271,7 @@ public class StudentServiceImpl implements StudentService{
      * @param studentId student id
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @Override
     public void stopVirtualMachine(Long vmId, String studentId){
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
@@ -304,6 +315,7 @@ public class StudentServiceImpl implements StudentService{
      * @param studentId student id
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @Override
     public void deleteVirtualMachine(Long vmId, String studentId){
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
@@ -348,6 +360,7 @@ public class StudentServiceImpl implements StudentService{
      * @param vmId the virtual machine id
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @Override
     public void addVirtualMachineOwners(String owner, List<String> students, Long vmId){
         Optional<Student> studentOptional = this.studentRepository.findById(owner);
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
@@ -402,6 +415,7 @@ public class StudentServiceImpl implements StudentService{
      * @param vmId the virtual machine id
      * @return the virtual machine DTO
      */
+    @Override
     public VirtualMachineDTO getVirtualMachine(Long vmId){
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
 
@@ -422,6 +436,82 @@ public class StudentServiceImpl implements StudentService{
 
         return this.modelMapper.map(virtualMachineOptional.get(),
                                     VirtualMachineDTO.class);
+    }
+
+    /**
+     * Function to upload a delivery for a student homework
+     * @param homeworkDTO homeworkDTO with the information of the student homework
+     * @param path path where to save the multipartFile
+     * @param multipartFile file to store
+     */
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @Override
+    public void uploadDelivery(HomeworkDTO homeworkDTO, String path, MultipartFile multipartFile){
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
+        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        Date deliveryDate = Date.valueOf(timestamp.toLocalDateTime().toLocalDate());
+        Delivery delivery = new Delivery();
+
+        // check if the homework exists
+        if (!homeworkOptional.isPresent()) {
+            throw new StudentServiceException("The homework doesn't exist");
+        }
+
+        // check if the homework is editable
+        if (!homeworkOptional.get().isEditable()) {
+            throw new StudentServiceException("Homework not editable");
+        }
+
+        // check if the assignment is not expired
+        if (deliveryDate.after(homeworkOptional.get().getAssignment().getExpiryDate())) {
+            throw new StudentServiceException("Delivery date expired");
+        }
+
+        delivery.setPathImage(path);
+        delivery.setStatus(Delivery.Status.DELIVERED);
+        delivery.setTimestamp(timestamp);
+        delivery.setHomework(homeworkOptional.get());
+
+        this.deliveryRepository.save(delivery);
+
+        // path passed as:
+        // String path = request.getSession().getServletContext().getRealPath("/tmp/...");
+        File dirPath = new File(path + delivery.getId().toString());
+
+        //check destination exists, if not create it
+//        if(!dirPath.exists())
+//        {
+//            dirPath.mkdir();
+//        }
+        try {
+            multipartFile.transferTo(dirPath);
+        }
+        catch (IllegalStateException | IOException e)
+        {
+            e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * Function to retrieve all the deleveries given a student homework
+     * @param homeworkId the student homework id
+     * @return list of all the deliveries for the specified homework
+     */
+    @Override
+    public List<DeliveryDTO> getStudentDeliveries(Long homeworkId){
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
+
+        // check if the homework exists
+        if (!homeworkOptional.isPresent()) {
+            throw new StudentServiceException();
+        }
+
+        return homeworkOptional.get()
+                                .getDeliveries()
+                                .stream()
+                                .map(x -> modelMapper.map(x, DeliveryDTO.class))
+                                .collect(Collectors.toList());
     }
 
 }

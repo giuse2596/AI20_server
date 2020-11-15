@@ -5,6 +5,7 @@ import it.polito.ai.project.server.dtos.TeamDTO;
 import it.polito.ai.project.server.entities.Token;
 import it.polito.ai.project.server.repositories.TokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.mail.SimpleMailMessage;
@@ -31,6 +32,24 @@ public class NotificationServiceImpl implements NotificationService{
 
     @Autowired
     public TeacherServiceImp teacherService;
+
+    @Value("${spring.mail.username}")
+    private String USERNAME;
+
+    @Value("${spring.mail.password}")
+    private String PWD;
+
+    @Value("${spring.mail.port}")
+    private int MAIL_PORT;
+
+    @Value("${spring.mail.host}")
+    private String MAIL_HOST;
+
+    @Value("${spring.mail.properties.mail.smtp.auth}")
+    private String SMTP_AUTH;
+
+    @Value("${spring.mail.properties.mail.smtp.starttls.enable}")
+    private String SMTP_STARTTLS;
 
     @Override
     public void sendMessage(String address, String subject, String body) {
@@ -116,7 +135,7 @@ public class NotificationServiceImpl implements NotificationService{
 
             email = student + "@studenti.polito.it";
 
-            sendMessage("eugeniocorso95@gmail.com",
+            sendMessage(USERNAME,
                         "Invitation to group " + dto.getName(),
                             "confirm at: " + s1 + " or reject at: " + s2);
 
@@ -127,16 +146,16 @@ public class NotificationServiceImpl implements NotificationService{
     @Bean
     public JavaMailSender getJavaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        mailSender.setHost("smtp.gmail.com");
-        mailSender.setPort(587);
+        mailSender.setHost(MAIL_HOST);
+        mailSender.setPort(MAIL_PORT);
 
-        mailSender.setUsername("eugeniocorso95@gmail.com");
-        mailSender.setPassword("ivgjuprpxrshmdtj");
+        mailSender.setUsername(USERNAME);
+        mailSender.setPassword(PWD);
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.auth", SMTP_AUTH);
+        props.put("mail.smtp.starttls.enable", SMTP_STARTTLS);
         props.put("mail.debug", "true");
 
         return mailSender;
