@@ -3,6 +3,7 @@ package it.polito.ai.project.server.controllers;
 import it.polito.ai.project.server.dtos.CourseDTO;
 import it.polito.ai.project.server.dtos.StudentDTO;
 import it.polito.ai.project.server.dtos.TeamDTO;
+import it.polito.ai.project.server.dtos.VMModelDTO;
 import it.polito.ai.project.server.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -78,22 +79,24 @@ public class CourseController {
 
     /**
      * URL to create a new course
-     * @param dto the course object to create
+     * @param courseDTO the course object to create
+     * @param vmModelDTO the virtual machine model object associated to the course
      * @return the course enriched with the URLs to the course services
      */
     @PostMapping({"","/"})
-    public CourseDTO addCourse(@Valid @RequestBody CourseDTO dto){
+    public CourseDTO addCourse(@Valid @RequestBody CourseDTO courseDTO,
+                               @Valid @RequestBody VMModelDTO vmModelDTO){
 
         try {
-            if (!teacherService.addCourse(dto)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, dto.getName());
+            if (!teacherService.addCourse(courseDTO, vmModelDTO)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, courseDTO.getName());
             }
         }
         catch (TransactionSystemException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
 
-        return modelHelper.enrich(generalService.getCourse(dto.getName()).get());
+        return modelHelper.enrich(generalService.getCourse(courseDTO.getName()).get());
     }
 
     /**
@@ -135,7 +138,7 @@ public class CourseController {
         catch (IOException e){
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
-        return teacherService.addAndEroll(reader, name);
+        return teacherService.addAndEnroll(reader, name);
     }
 
     /**

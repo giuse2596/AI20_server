@@ -39,7 +39,7 @@ public class Student {
     @ManyToMany(mappedBy = "members")
     List<Team> teams = new ArrayList<Team>();
 
-    @ManyToMany(mappedBy = "student")
+    @ManyToMany(mappedBy = "owners")
     List<VirtualMachine> virtualMachines = new ArrayList<>();
 
     @OneToMany( mappedBy = "student")

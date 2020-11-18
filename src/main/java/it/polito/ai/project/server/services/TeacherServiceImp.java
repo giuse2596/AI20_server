@@ -9,9 +9,16 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
 import javax.transaction.Transactional;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.Reader;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -24,6 +31,9 @@ public class TeacherServiceImp implements TeacherService {
 
     @Autowired
     StudentRepository studentRepository;
+
+    @Autowired
+    TeacherRepository teacherRepository;
 
     @Autowired
     TeamRepository teamRepository;
@@ -70,14 +80,27 @@ public class TeacherServiceImp implements TeacherService {
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public boolean addCourse(CourseDTO course) {
+    public boolean addCourse(CourseDTO course, VMModelDTO vmModelDTO) {
+        VMModel vmModel = new VMModel();
+
         // check if there is already a course with the same name
         if(generalService.getCourse(course.getName()).isPresent()){
             return false;
         }
 
+        vmModel.setCpuMax(vmModelDTO.getCpuMax());
+        vmModel.setRamMax(vmModelDTO.getRamMax());
+        vmModel.setDiskSpaceMax(vmModelDTO.getDiskSpaceMax());
+        vmModel.setTotalInstances(vmModelDTO.getTotalInstances());
+        vmModel.setActiveInstances(vmModelDTO.getActiveInstances());
+
         // add the course
         this.courseRepository.save(modelMapper.map(course, Course.class));
+
+        vmModel.setCourse(this.courseRepository.findById(course.getName()).get());
+
+        this.vmModelRepository.save(vmModel);
+
         return true;
     }
 
@@ -223,9 +246,53 @@ public class TeacherServiceImp implements TeacherService {
             return false;
         }
 
-        courseOptional
-                .get()
-                .addStudent(studentOptional.get());
+        courseOptional.get().addStudent(studentOptional.get());
+
+        return true;
+    }
+
+    @Override
+    public boolean addTeacherToCourse(String teacherId, String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+        Optional<Teacher> teacherOptional = teacherRepository.findById(teacherId);
+
+        // check if the course exist
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
+        }
+        // check if the teacher exist
+        if(!teacherOptional.isPresent()){
+            throw new StudentNotFoundExeption();
+        }
+        // check if the course is enabled
+        if(!courseOptional.get().isEnabled()){
+            return false;
+        }
+
+        // check if the course already contains the teacher
+        if (
+                courseOptional
+                        .get()
+                        .getTeachers()
+                        .contains(teacherOptional.get() )
+        )
+        {
+            return false;
+        }
+
+        // check if the teacher already has the course
+        if(
+                teacherOptional
+                        .get()
+                        .getCourses()
+                        .contains(courseOptional.get() )
+        )
+        {
+            return false;
+        }
+
+        courseOptional.get().addTeacher(teacherOptional.get());
+
         return true;
     }
 
@@ -277,9 +344,36 @@ public class TeacherServiceImp implements TeacherService {
             return false;
         }
 
-        courseOptional
-                .get()
-                .removeStudent(studentOptional.get());
+        // removing the student from the virtual machines
+        studentOptional.get().getTeams()
+                .stream()
+                .filter(x -> x.getCourse().getName().equals(courseName))
+                .flatMap(x -> x.getVirtualMachines().stream())
+                .filter(x -> x.getOwners().contains(studentOptional.get()))
+                .forEach(x -> {
+                    x.removeOwner(studentOptional.get());
+                    // if the size of the owners is zero then remove the virtual machine
+                    // from the team and from the repository
+                    if(x.getOwners().size() == 0){
+                        x.setTeam(null);
+                        this.vmModelRepository.deleteById(x.getId());
+                    }
+                });
+
+        // removing the student from the team
+        studentOptional.get().getTeams()
+                .stream()
+                .filter(x -> x.getCourse().getName().equals(courseName))
+                .forEach(x -> {
+                    x.removeMember(studentOptional.get());
+                    if(x.getMembers().size() == 0){
+                        teamService.evictTeam(x.getId());
+                    }
+                });
+
+        // removing the student from the course
+        courseOptional.get().removeStudent(studentOptional.get());
+
         return true;
     }
 
@@ -379,7 +473,7 @@ public class TeacherServiceImp implements TeacherService {
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public List<Boolean> addAndEroll(Reader r, String courseName) {
+    public List<Boolean> addAndEnroll(Reader r, String courseName) {
         // create a csv reader
         CsvToBean<StudentDTO> csvToBean = new CsvToBeanBuilder(r)
                 .withType(StudentDTO.class)
@@ -479,6 +573,20 @@ public class TeacherServiceImp implements TeacherService {
         newAssignemt.setPathImage(assignment.getPathImage());
         newAssignemt.setCourse(courseOptional.get());
 
+        // create homework with a delivery with the NULL status for all students
+        courseOptional.get().getStudents()
+                .forEach(x -> {
+                    Homework studentHomework = new Homework();
+                    Delivery firstDelivery = new Delivery();
+                    studentHomework.setEditable(true);
+                    studentHomework.setStudent(x);
+                    studentHomework.setAssignment(newAssignemt);
+                    // adding a delivery to the homework with NULL state
+                    firstDelivery.setHomework(studentHomework);
+                    firstDelivery.setStatus(Delivery.Status.NULL);
+                    firstDelivery.setTimestamp(new Timestamp(System.currentTimeMillis()));
+                });
+
         // save the assignment
         this.assignmentRepository.save(newAssignemt);
 
@@ -536,6 +644,69 @@ public class TeacherServiceImp implements TeacherService {
         // remove the assignment
         assignmentRepository.deleteById(assignment.getId());
 
+    }
+
+    @Override
+    public void assignMarkToHomework(HomeworkDTO homework) {
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homework.getId());
+
+        // check if the homework exists
+        if(!homeworkOptional.isPresent()){
+            throw new TeacherServiceException("Homework does not exists");
+        }
+
+        // assign a mark to the homework
+        homeworkOptional.get().setMark(homework.getMark());
+
+        // set the flag to false
+        homeworkOptional.get().setEditable(false);
+
+        this.homeworkRepository.save(homeworkOptional.get());
+
+    }
+
+    @Override
+    public void revisionDelivery(HomeworkDTO homeworkDTO, MultipartFile multipartFile) {
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
+        Delivery delivery = new Delivery();
+
+        // check if the homework exists
+        if (!homeworkOptional.isPresent()) {
+            throw new StudentServiceException("The homework doesn't exist");
+        }
+
+        // set the appropriate path to pathimage
+        delivery.setPathImage("path of the file");
+        delivery.setStatus(Delivery.Status.REVIEWED);
+        delivery.setTimestamp(new Timestamp(System.currentTimeMillis()));
+        delivery.setHomework(homeworkOptional.get());
+
+        this.deliveryRepository.save(delivery);
+
+        // save the file in the application
+
+    }
+
+    @Override
+    public byte[] getAssignmentImage(AssignmentDTO assignmentDTO) {
+        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentDTO.getId());
+        BufferedImage bufferedImage;
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        // check if the assignment exists
+        if (!assignmentOptional.isPresent()) {
+            throw new TeacherServiceException("Assignment does not exist");
+        }
+
+        try {
+            bufferedImage = ImageIO.read(new File(assignmentDTO.getPathImage()));
+            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+        }
+        catch (IOException e){
+            throw new StudentServiceException();
+        }
+
+        return byteArrayOutputStream.toByteArray();
     }
 
 }
