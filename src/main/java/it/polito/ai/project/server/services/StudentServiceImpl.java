@@ -1,8 +1,6 @@
 package it.polito.ai.project.server.services;
 
-import it.polito.ai.project.server.dtos.DeliveryDTO;
-import it.polito.ai.project.server.dtos.HomeworkDTO;
-import it.polito.ai.project.server.dtos.VirtualMachineDTO;
+import it.polito.ai.project.server.dtos.*;
 import it.polito.ai.project.server.entities.*;
 import it.polito.ai.project.server.repositories.*;
 import org.modelmapper.ModelMapper;
@@ -11,9 +9,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
 import javax.transaction.Transactional;
-import java.io.File;
-import java.io.IOException;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.List;
@@ -41,6 +40,9 @@ public class StudentServiceImpl implements StudentService{
 
     @Autowired
     DeliveryRepository deliveryRepository;
+
+    @Autowired
+    AssignmentRepository assignmentRepository;
 
     @Autowired
     ModelMapper modelMapper;
@@ -438,6 +440,45 @@ public class StudentServiceImpl implements StudentService{
                                     VirtualMachineDTO.class);
     }
 
+
+    /**
+     * Get an existing virtual machine
+     * @param vmId the virtual machine id
+     * @return the virtual machine image
+     */
+    @Override
+    public byte[] getVirtualMachineImage(Long vmId){
+        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
+        BufferedImage bufferedImage;
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        // check if the vm exists
+        if(!virtualMachineOptional.isPresent()){
+            throw new StudentServiceException("Virtual machine doesn't exist");
+        }
+
+        // check if the course is enabled
+        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
+            throw new StudentServiceException("Course not enabled");
+        }
+
+        // check if the team is active
+        if(virtualMachineOptional.get().getTeam().getStatus() != 1){
+            throw new StudentServiceException("Team not active");
+        }
+
+        try {
+            bufferedImage = ImageIO.read(new File(virtualMachineOptional.get().getPathImage()));
+            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+        }
+        catch (IOException e){
+            throw new StudentServiceException();
+        }
+
+        return byteArrayOutputStream.toByteArray();
+    }
+
+
     /**
      * Function to upload a delivery for a student homework
      * @param homeworkDTO homeworkDTO with the information of the student homework
@@ -512,6 +553,87 @@ public class StudentServiceImpl implements StudentService{
                                 .stream()
                                 .map(x -> modelMapper.map(x, DeliveryDTO.class))
                                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Function to get the image of the specified delivery
+     * @param deliveryDTO the dto to send containing delivery info
+     * @return a byte array of the image associated to the delivery
+     */
+    @Override
+    public byte[] getDeliveryImage(DeliveryDTO deliveryDTO){
+        Optional<Delivery> deliveryOptional = this.deliveryRepository.findById(deliveryDTO.getId());
+        BufferedImage bufferedImage;
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        // check if the delivery exists
+        if (!deliveryOptional.isPresent()) {
+            throw new StudentServiceException();
+        }
+
+        try {
+            bufferedImage = ImageIO.read(new File(deliveryDTO.getPathImage()));
+            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+        }
+        catch (IOException e){
+            throw new StudentServiceException();
+        }
+        return byteArrayOutputStream.toByteArray();
+    }
+
+
+    /**
+     * Function to get the image of a specified assignment and
+     * mark as READ the student homework
+     * @param assignmentDTO the dto to send containing assignment info
+     * @param studentDTO the student dto
+     * @return a byte array of the image associated to the assignment
+     */
+    @Override
+    public byte[] getAssignmentImage(AssignmentDTO assignmentDTO, StudentDTO studentDTO){
+        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentDTO.getId());
+        Optional<Student> studentOptional = this.studentRepository.findById(studentDTO.getId());
+        BufferedImage bufferedImage;
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        Delivery delivery = new Delivery();
+        Homework homework;
+
+        // check if the student exists
+        if (!studentOptional.isPresent()) {
+            throw new StudentNotFoundExeption();
+        }
+
+        // check if the assignment exists
+        if (!assignmentOptional.isPresent()) {
+            throw new StudentServiceException();
+        }
+
+        // get the homework for the given assignment
+        homework = studentOptional.get()
+                        .getHomeworks()
+                        .stream()
+                        .filter(x -> x.getAssignment().getId().equals(assignmentDTO.getId()))
+                        .collect(Collectors.toList()).get(0);
+
+        if (
+            homework.getDeliveries()
+                    .get(homework.getDeliveries().size()-1)
+                    .getStatus().equals(Delivery.Status.NULL)
+        ) {
+            delivery.setHomework(homework);
+            delivery.setTimestamp(new Timestamp(System.currentTimeMillis()));
+            delivery.setStatus(Delivery.Status.READ);
+            this.deliveryRepository.save(delivery);
+        }
+
+        try {
+            bufferedImage = ImageIO.read(new File(assignmentDTO.getPathImage()));
+            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+        }
+        catch (IOException e){
+            throw new StudentServiceException();
+        }
+        return byteArrayOutputStream.toByteArray();
     }
 
 }

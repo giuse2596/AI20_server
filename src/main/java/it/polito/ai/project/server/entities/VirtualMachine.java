@@ -20,6 +20,9 @@ public class VirtualMachine {
     @NotBlank
     private String name;
 
+    @NotBlank
+    private String pathImage;
+
     @NotEmpty
     private Integer cpu;
 
