@@ -90,22 +90,18 @@ public class NotificationServiceImpl implements NotificationService{
 
     @Override
     public boolean reject(String token) {
-        Token t;
+        Optional<Token> t = tokenRepository.findById(token);
 
         // verify if exist
-        if(!tokenRepository.existsById(token)){
+        if(!t.isPresent()){
             return false;
         }
 
-        // retrieve the token
-        t = tokenRepository.findById(token).get();
-
         // delete all the remaining token
-        tokenRepository.findAllByTeamId(t.getTeamId())
-                .stream()
+        tokenRepository.findAllByTeamId(t.get().getTeamId())
                 .forEach(x -> tokenRepository.deleteById(x.getId()));
 
-        teamService.evictTeam(t.getTeamId());
+        teamService.evictTeam(t.get().getTeamId());
         return true;
     }
 
@@ -122,6 +118,7 @@ public class NotificationServiceImpl implements NotificationService{
             Token t = new Token();
             t.setExpiryDate(ts);
             t.setTeamId(dto.getId());
+            t.setStudentId(student);
             t.setId(UUID.randomUUID().toString());
             tokenRepository.save(t);
 
