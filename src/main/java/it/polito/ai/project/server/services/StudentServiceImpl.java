@@ -72,7 +72,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the team is active
-        if(teamOptional.get().getStatus() != 1){
+        if(!teamOptional.get().isActive()){
             throw new StudentServiceException("Team not active");
         }
 
@@ -181,7 +181,7 @@ public class StudentServiceImpl implements StudentService{
         team = virtualMachineOptional.get().getTeam();
 
         // check if the team is active
-        if(team.getStatus() != 1){
+        if(!team.isActive()){
             throw new StudentServiceException("Team not active");
         }
 
@@ -250,7 +250,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the team is active
-        if(virtualMachineOptional.get().getTeam().getStatus() != 1){
+        if(!virtualMachineOptional.get().getTeam().isActive()){
             throw new StudentServiceException("Team not active");
         }
 
@@ -294,7 +294,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the team is active
-        if(virtualMachineOptional.get().getTeam().getStatus() != 1){
+        if(!virtualMachineOptional.get().getTeam().isActive()){
             throw new StudentServiceException("Team not active");
         }
 
@@ -333,7 +333,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the team is active
-        if(virtualMachineOptional.get().getTeam().getStatus() != 1){
+        if(!virtualMachineOptional.get().getTeam().isActive()){
             throw new StudentServiceException("Team not active");
         }
 
@@ -400,7 +400,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the team is active
-        if(virtualMachineOptional.get().getTeam().getStatus() != 1){
+        if(!virtualMachineOptional.get().getTeam().isActive()){
             throw new StudentServiceException("Team not active");
         }
 
@@ -432,7 +432,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the team is active
-        if(virtualMachineOptional.get().getTeam().getStatus() != 1){
+        if(!virtualMachineOptional.get().getTeam().isActive()){
             throw new StudentServiceException("Team not active");
         }
 
@@ -463,7 +463,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // check if the team is active
-        if(virtualMachineOptional.get().getTeam().getStatus() != 1){
+        if(!virtualMachineOptional.get().getTeam().isActive()){
             throw new StudentServiceException("Team not active");
         }
 

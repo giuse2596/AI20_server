@@ -191,7 +191,7 @@ public class TeamServiceImpl implements TeamService {
         // create the team
         team.setName(name);
         team.setProposer(proposer);
-        team.setStatus(memberIds.size());
+        team.setActive(false);
         team.setCourse(courseOptional.get());
         team.setMembers(optionalStudentList.stream().map(x -> x.get()).collect(Collectors.toList()));
 
@@ -258,7 +258,7 @@ public class TeamServiceImpl implements TeamService {
             throw new TeamNotFoundException();
         }
 
-        teamOptional.get().setStatus(1);
+        teamOptional.get().setActive(true);
     }
 
     /**

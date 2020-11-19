@@ -62,25 +62,22 @@ public class NotificationServiceImpl implements NotificationService{
 
     @Override
     public boolean confirm(String token) {
-        Token t;
+        Optional<Token> t = tokenRepository.findById(token);
 
         // verify if exist
-        if(!tokenRepository.existsById(token)){
+        if(!t.isPresent()){
             return false;
         }
 
-        // retrieve the token
-        t = tokenRepository.findById(token).get();
-
         // verify if is expired
-        if(t.getExpiryDate().before(new Timestamp(System.currentTimeMillis()))){
+        if(t.get().getExpiryDate().before(new Timestamp(System.currentTimeMillis()))){
             this.reject(token);
             return false;
         }
 
         // check if is the last
-        if(tokenRepository.findAllByTeamId(t.getTeamId()).stream().count() == 1){
-            teamService.enableTeam(t.getTeamId());
+        if(tokenRepository.findAllByTeamId(t.get().getTeamId()).stream().count() == 1){
+            teamService.enableTeam(t.get().getTeamId());
         }
 
         tokenRepository.deleteById(token);
@@ -132,7 +129,7 @@ public class NotificationServiceImpl implements NotificationService{
 
             email = student + "@studenti.polito.it";
 
-            sendMessage(USERNAME,
+            sendMessage(email,
                         "Invitation to group " + dto.getName(),
                             "confirm at: " + s1 + " or reject at: " + s2);
 

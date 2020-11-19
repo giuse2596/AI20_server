@@ -24,7 +24,7 @@ public class Team {
     private String proposer;
 
     @NotEmpty
-    private Integer status;
+    private boolean active;
 
     @NotEmpty
     private Integer cpuMax;
