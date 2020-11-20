@@ -2,7 +2,10 @@ package it.polito.ai.project.server.services;
 
 import it.polito.ai.project.server.controllers.NotificationController;
 import it.polito.ai.project.server.dtos.TeamDTO;
+import it.polito.ai.project.server.entities.Student;
+import it.polito.ai.project.server.entities.Team;
 import it.polito.ai.project.server.entities.Token;
+import it.polito.ai.project.server.repositories.TeamRepository;
 import it.polito.ai.project.server.repositories.TokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +29,9 @@ public class NotificationServiceImpl implements NotificationService{
 
     @Autowired
     public TokenRepository tokenRepository;
+
+    @Autowired
+    public TeamRepository teamRepository;
 
     @Autowired
     public TeamServiceImpl teamService;
@@ -62,10 +68,18 @@ public class NotificationServiceImpl implements NotificationService{
 
     @Override
     public boolean confirm(String token) {
-        Optional<Token> t = tokenRepository.findById(token);
+        Optional<Token> t = this.tokenRepository.findById(token);
+        Optional<Team> teamOptional;
 
         // verify if exist
         if(!t.isPresent()){
+            return false;
+        }
+
+        teamOptional = teamRepository.findById(t.get().getTeamId());
+
+        // check if the team exists
+        if(!teamOptional.isPresent()){
             return false;
         }
 
@@ -75,19 +89,32 @@ public class NotificationServiceImpl implements NotificationService{
             return false;
         }
 
-        // check if is the last
-        if(tokenRepository.findAllByTeamId(t.get().getTeamId()).stream().count() == 1){
-            teamService.enableTeam(t.get().getTeamId());
+        // check if is the last student to confirm and if so enable the team and remove
+        // all pending requests from all other teams of this course that have this
+        // team of students as proposed members
+        if(this.tokenRepository.findAllByTeamId(t.get().getTeamId()).stream().count() == 1){
+            this.teamService.enableTeam(t.get().getTeamId());
+
+            teamOptional.get()
+                    .getMembers()
+                    .stream()
+                    .map(Student::getTeams)
+                    .flatMap(Collection::stream)
+                    .filter(x ->
+                            (!x.getId().equals(teamOptional.get().getId())) &&
+                            (x.getCourse().getName().equals(teamOptional.get().getCourse().getName()))
+                            )
+                    .forEach(x -> this.teamService.evictTeam(x.getId()));
         }
 
-        tokenRepository.deleteById(token);
+        this.tokenRepository.deleteById(token);
 
         return true;
     }
 
     @Override
     public boolean reject(String token) {
-        Optional<Token> t = tokenRepository.findById(token);
+        Optional<Token> t = this.tokenRepository.findById(token);
 
         // verify if exist
         if(!t.isPresent()){
@@ -95,10 +122,10 @@ public class NotificationServiceImpl implements NotificationService{
         }
 
         // delete all the remaining token
-        tokenRepository.findAllByTeamId(t.get().getTeamId())
+        this.tokenRepository.findAllByTeamId(t.get().getTeamId())
                 .forEach(x -> tokenRepository.deleteById(x.getId()));
 
-        teamService.evictTeam(t.get().getTeamId());
+        this.teamService.evictTeam(t.get().getTeamId());
         return true;
     }
 
@@ -117,7 +144,7 @@ public class NotificationServiceImpl implements NotificationService{
             t.setTeamId(dto.getId());
             t.setStudentId(student);
             t.setId(UUID.randomUUID().toString());
-            tokenRepository.save(t);
+            this.tokenRepository.save(t);
 
             s1 = WebMvcLinkBuilder.linkTo(NotificationController.class)
                                 .slash("confirm")
