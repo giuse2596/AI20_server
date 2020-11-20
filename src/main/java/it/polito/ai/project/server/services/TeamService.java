@@ -20,4 +20,6 @@ public interface TeamService {
     void enableTeam(Long teamId);
     void evictTeam(Long teamId);
     List<VirtualMachineDTO> getTeamVirtualMachines(Long teamId);
+    List<StudentDTO> getConfirmedMembersTeam(Long teamId);
+    List<StudentDTO> getPendentMembersTeam(Long teamId);
 }

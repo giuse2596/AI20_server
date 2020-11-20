@@ -5,10 +5,7 @@ import it.polito.ai.project.server.dtos.StudentDTO;
 import it.polito.ai.project.server.dtos.TeamDTO;
 import it.polito.ai.project.server.dtos.VirtualMachineDTO;
 import it.polito.ai.project.server.entities.*;
-import it.polito.ai.project.server.repositories.CourseRepository;
-import it.polito.ai.project.server.repositories.StudentRepository;
-import it.polito.ai.project.server.repositories.TeamRepository;
-import it.polito.ai.project.server.repositories.VirtualMachinesRepository;
+import it.polito.ai.project.server.repositories.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,6 +26,9 @@ public class TeamServiceImpl implements TeamService {
 
     @Autowired
     TeamRepository teamRepository;
+
+    @Autowired
+    TokenRepository tokenRepository;
 
     @Autowired
     VirtualMachinesRepository virtualMachinesRepository;
@@ -293,6 +293,9 @@ public class TeamServiceImpl implements TeamService {
         // remove team from each student
         teamOptional.get().getMembers().forEach(x -> teamOptional.get().removeMember(x));
 
+        // remove relation between team and course
+        teamOptional.get().setCourse(null);
+
         // remove team from the repository
         this.teamRepository.deleteById(teamId);
     }
@@ -319,6 +322,54 @@ public class TeamServiceImpl implements TeamService {
                 .getVirtualMachines()
                 .stream()
                 .map(x -> modelMapper.map(x, VirtualMachineDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<StudentDTO> getConfirmedMembersTeam(Long teamId) {
+        Optional<Team> teamOptional = teamRepository.findById(teamId);
+        List<String> membersIds;
+
+        // check if the team exists
+        if(!teamOptional.isPresent()){
+            throw new TeamNotFoundException();
+        }
+
+        membersIds = this.tokenRepository.findAllByTeamId(teamId)
+                    .stream()
+                    .map(Token::getStudentId)
+                    .collect(Collectors.toList());
+
+        return teamOptional.get().getMembers()
+                .stream()
+                .filter(x -> !membersIds
+                        .contains(x.getId())
+                )
+                .map(x -> modelMapper.map(x, StudentDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<StudentDTO> getPendentMembersTeam(Long teamId) {
+        Optional<Team> teamOptional = teamRepository.findById(teamId);
+        List<String> membersIds;
+
+        // check if the team exists
+        if(!teamOptional.isPresent()){
+            throw new TeamNotFoundException();
+        }
+
+        membersIds = this.tokenRepository.findAllByTeamId(teamId)
+                .stream()
+                .map(Token::getStudentId)
+                .collect(Collectors.toList());
+
+        return teamOptional.get().getMembers()
+                .stream()
+                .filter(x -> membersIds
+                        .contains(x.getId())
+                )
+                .map(x -> modelMapper.map(x, StudentDTO.class))
                 .collect(Collectors.toList());
     }
 
