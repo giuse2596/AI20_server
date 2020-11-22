@@ -1,6 +1,8 @@
 package it.polito.ai.project.server.services;
 
+import it.polito.ai.project.server.dtos.UserDTO;
+
 public interface UserService {
-    void registerStudent(String username, String password);
-    void registerTeacher(String username, String password);
+    void registerStudent(UserDTO userDTO);
+    void registerTeacher(UserDTO userDTO);
 }

@@ -1,6 +1,7 @@
 package it.polito.ai.project.server.services;
 
 import it.polito.ai.project.server.dtos.TeamDTO;
+import it.polito.ai.project.server.dtos.UserDTO;
 
 import java.util.List;
 
@@ -9,4 +10,6 @@ public interface NotificationService {
     boolean confirm(String token);
     boolean reject(String token);
     void notifyTeam(TeamDTO dto, List<String> memberIds);
+    void notifyInscription(UserDTO userDTO);
+    boolean confirmRegistration(String token);
 }

@@ -25,14 +25,26 @@ public class NotificationController {
 
     @GetMapping("/confirm/{token}")
     public String confirmToken(@PathVariable String token){
-        this.notificationService.confirm(token);
-        return "confirm";
+        if (this.notificationService.confirm(token)) {
+            return "confirm";
+        }
+        return "error";
     }
 
     @GetMapping("/reject/{token}")
     public String rejectToken(@PathVariable String token){
-        this.notificationService.reject(token);
-        return "reject";
+        if (this.notificationService.reject(token)) {
+            return "reject";
+        }
+        return "error";
+    }
+
+    @GetMapping("/confirmRegistration/{token}")
+    public String confirmRegistration(@PathVariable String token){
+        if (this.notificationService.confirmRegistration(token)) {
+            return "confirm_registration";
+        }
+        return "error";
     }
 
     @PostMapping("/propose/{courseName}/{team}")

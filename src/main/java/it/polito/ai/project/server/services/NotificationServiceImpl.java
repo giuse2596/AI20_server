@@ -2,11 +2,12 @@ package it.polito.ai.project.server.services;
 
 import it.polito.ai.project.server.controllers.NotificationController;
 import it.polito.ai.project.server.dtos.TeamDTO;
-import it.polito.ai.project.server.entities.Student;
-import it.polito.ai.project.server.entities.Team;
-import it.polito.ai.project.server.entities.Token;
+import it.polito.ai.project.server.dtos.UserDTO;
+import it.polito.ai.project.server.entities.*;
+import it.polito.ai.project.server.repositories.RegistrationTokenRepository;
 import it.polito.ai.project.server.repositories.TeamRepository;
 import it.polito.ai.project.server.repositories.TokenRepository;
+import it.polito.ai.project.server.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -31,7 +32,13 @@ public class NotificationServiceImpl implements NotificationService{
     public TokenRepository tokenRepository;
 
     @Autowired
+    public RegistrationTokenRepository registrationTokenRepository;
+
+    @Autowired
     public TeamRepository teamRepository;
+
+    @Autowired
+    public UserRepository userRepository;
 
     @Autowired
     public TeamServiceImpl teamService;
@@ -162,6 +169,50 @@ public class NotificationServiceImpl implements NotificationService{
 
         }
 
+    }
+
+    @Override
+    public void notifyInscription(UserDTO userDTO){
+        RegistrationToken registrationToken = new RegistrationToken();
+        String link;
+
+        registrationToken.setId(UUID.randomUUID().toString());
+        registrationToken.setUserId(userDTO.getId());
+        this.registrationTokenRepository.save(registrationToken);
+
+        link = WebMvcLinkBuilder.linkTo(NotificationController.class)
+                .slash("confirmRegistration")
+                .slash(registrationToken.getId()).toString();
+
+        sendMessage(userDTO.getEmail(),
+                "Confirm registration ",
+                "Welcome! Confirm your registration at: " + link);
+    }
+
+    @Override
+    public boolean confirmRegistration(String token){
+        Optional<RegistrationToken> registrationTokenOptional =
+                this.registrationTokenRepository.findById(token);
+        Optional<User> userOptional;
+
+        // check if the token exists
+        if (!registrationTokenOptional.isPresent()) {
+            return false;
+        }
+
+        userOptional = this.userRepository.findById(registrationTokenOptional.get().getUserId());
+
+        if (!userOptional.isPresent()) {
+            return false;
+        }
+
+        userOptional.get().setActive(true);
+
+        this.userRepository.save(userOptional.get());
+
+        this.registrationTokenRepository.delete(registrationTokenOptional.get());
+
+        return true;
     }
 
     @Bean

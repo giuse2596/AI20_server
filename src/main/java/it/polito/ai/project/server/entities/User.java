@@ -9,6 +9,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.persistence.*;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,11 +30,23 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.AUTO)
     Long id;
 
-    @NotEmpty
-    private String username;
+    @Email
+    private String email;
+
+    @NotBlank
+    private String password;
+
+    @NotBlank
+    private String serialNumber;
+
+    @NotBlank
+    private String name;
+
+    @NotBlank
+    private String firstname;
 
     @NotEmpty
-    private String password;
+    private boolean active;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Builder.Default
@@ -50,7 +64,7 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return this.username;
+        return this.email;
     }
 
     @Override
