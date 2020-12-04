@@ -23,7 +23,7 @@ public class Delivery {
     @GeneratedValue
     private Long id;
 
-    @NotEmpty
+    @NotNull
     @Enumerated(EnumType.ORDINAL)
     private Status status;
 
@@ -31,7 +31,7 @@ public class Delivery {
     @NotBlank
     private String pathImage;
 
-    @NotEmpty
+    @NotNull
     private Timestamp timestamp;
 
     @ManyToOne

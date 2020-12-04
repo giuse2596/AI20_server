@@ -14,7 +14,7 @@ public interface StudentService {
     void addVirtualMachineOwners(String owner, List<String> students, Long vmId);
     VirtualMachineDTO getVirtualMachine(Long vmId);
     byte[] getVirtualMachineImage(Long vmId);
-    void uploadDelivery(HomeworkDTO homeworkDTO, String path, MultipartFile multipartFile);
+    void uploadDelivery(Long homeworkId, String path, MultipartFile multipartFile);
     List<DeliveryDTO> getStudentDeliveries(Long homeworkId);
     byte[] getDeliveryImage(DeliveryDTO deliveryDTO);
     byte[] getAssignmentImage(AssignmentDTO assignmentDTO, StudentDTO studentDTO);

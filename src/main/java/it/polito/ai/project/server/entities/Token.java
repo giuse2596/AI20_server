@@ -6,6 +6,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.sql.Timestamp;
 
 @Entity
@@ -14,12 +15,12 @@ public class Token {
     @Id
     private String id;
 
-    @NotBlank
+    @NotNull
     private Long teamId;
 
     @NotBlank
     private String studentId;
 
-    @NotEmpty
+    @NotNull
     private Timestamp expiryDate;
 }

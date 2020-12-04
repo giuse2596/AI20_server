@@ -19,7 +19,7 @@ public class Homework {
 
     private Integer mark;
 
-    @NotEmpty
+    @NotNull
     private boolean editable;
 
     @ManyToOne

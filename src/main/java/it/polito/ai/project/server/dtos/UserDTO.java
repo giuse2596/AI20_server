@@ -6,6 +6,7 @@ import org.springframework.hateoas.RepresentationModel;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 
 @Data
 public class UserDTO extends RepresentationModel<TeacherDTO> {
@@ -19,7 +20,7 @@ public class UserDTO extends RepresentationModel<TeacherDTO> {
     private String password;
 
     @NotBlank
-    private String serialNumber;
+    private String username;
 
     @NotBlank
     private String name;
@@ -27,7 +28,7 @@ public class UserDTO extends RepresentationModel<TeacherDTO> {
     @NotBlank
     private String firstname;
 
-    @NotEmpty
+    @NotNull
     private boolean active;
 
 }

@@ -36,8 +36,7 @@ public class TeamServiceImpl implements TeamService {
     @Autowired
     ModelMapper modelMapper;
 
-    StudentServiceImpl studentService;
-
+    @Autowired
     TeacherServiceImp teacherService;
 
     /**
@@ -162,8 +161,17 @@ public class TeamServiceImpl implements TeamService {
 
         // check if the students are not already part of a team of this course
         if(
-            optionalStudentList.stream().map(x -> x.get().getId())
-            .anyMatch(x -> studentsInTeam.contains(x))
+            optionalStudentList
+                    .stream()
+                    .map(x -> x.get().getId())
+                    .anyMatch(
+                            x -> studentsInTeam
+                                    .stream()
+                                    .map(y -> modelMapper.map(y, StudentDTO.class))
+                                    .map(StudentDTO::getId)
+                                    .collect(Collectors.toList())
+                                    .contains(x)
+                    )
         ){
             throw new TeamServiceException();
         }
@@ -204,8 +212,7 @@ public class TeamServiceImpl implements TeamService {
         // setted as the max of total active virtual machines specified in the model
         team.setActiveVM(vmModel.getActiveInstances());
 
-        teamRepository.save(team);
-        team = teamRepository.findById(team.getId()).get();
+        team = teamRepository.save(team);
         return modelMapper.map(team, TeamDTO.class);
     }
 
@@ -225,8 +232,6 @@ public class TeamServiceImpl implements TeamService {
                                 .map(x -> modelMapper.map(x, StudentDTO.class))
                                 .collect(Collectors.toList());
     }
-
-    //
 
     /**
      * Retrieve existing students who are not part of a course team
@@ -269,6 +274,7 @@ public class TeamServiceImpl implements TeamService {
     public void evictTeam(Long teamId) {
         Optional<Team> teamOptional = this.teamRepository.findById(teamId);
         List<VirtualMachine> tempvirtualmachines;
+        List<Student> studentsInTeam = new ArrayList<>();
 
         // check if the team exist
         if(!teamOptional.isPresent()){
@@ -290,8 +296,10 @@ public class TeamServiceImpl implements TeamService {
         // remove the virtual machine from the repository
         tempvirtualmachines.forEach(x -> this.virtualMachinesRepository.deleteById(x.getId()));
 
-        // remove team from each student
-        teamOptional.get().getMembers().forEach(x -> teamOptional.get().removeMember(x));
+        // remove team from each student, copying the members in a temporary variable
+        // because the original list is modified
+        teamOptional.get().getMembers().forEach(x -> studentsInTeam.add(x));
+        studentsInTeam.forEach(x -> teamOptional.get().removeMember(x));
 
         // remove relation between team and course
         teamOptional.get().setCourse(null);
@@ -325,6 +333,11 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieve the list of the students that confirmed to join in one team
+     * @param teamId the team id
+     * @return the list of the students that confirmed to join in one team
+     */
     @Override
     public List<StudentDTO> getConfirmedMembersTeam(Long teamId) {
         Optional<Team> teamOptional = teamRepository.findById(teamId);
@@ -349,6 +362,11 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieve all the pendant students' requests to join a team
+     * @param teamId the team id
+     * @return the list of pendant members
+     */
     @Override
     public List<StudentDTO> getPendentMembersTeam(Long teamId) {
         Optional<Team> teamOptional = teamRepository.findById(teamId);

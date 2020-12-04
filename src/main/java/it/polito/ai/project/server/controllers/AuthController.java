@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -48,17 +47,17 @@ public class AuthController {
             throw new BadCredentialsException("Invalid username/password supplied");
         }
 
-        if( (userDTO.getSerialNumber() == null) || (userDTO.getPassword() == null)){
+        if( (userDTO.getUsername() == null) || (userDTO.getPassword() == null)){
             throw new BadCredentialsException("Invalid username/password supplied");
         }
 
-        if (userDTO.getSerialNumber().isEmpty() || userDTO.getPassword().isEmpty()) {
+        if (userDTO.getUsername().isEmpty() || userDTO.getPassword().isEmpty()) {
             throw new BadCredentialsException("Invalid username/password supplied");
         }
 
         userOptional = this.users.findAll()
                                 .stream()
-                                .filter(x -> x.getSerialNumber().equals(userDTO.getSerialNumber()))
+                                .filter(x -> x.getUsername().equals(userDTO.getUsername()))
                                 .findFirst();
 
         if (!userOptional.isPresent()) {
@@ -70,7 +69,7 @@ public class AuthController {
         }
 
         try {
-            username = userOptional.get().getSerialNumber();
+            username = userOptional.get().getUsername();
 
             authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(

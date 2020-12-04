@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -45,6 +46,9 @@ public class TeacherServiceImp implements TeacherService {
     ModelMapper modelMapper;
 
     @Autowired
+    VirtualMachinesRepository virtualMachinesRepository;
+
+    @Autowired
     VMModelRepository vmModelRepository;
 
     @Autowired
@@ -53,25 +57,11 @@ public class TeacherServiceImp implements TeacherService {
     @Autowired
     DeliveryRepository deliveryRepository;
 
+    @Autowired
     GeneralServiceImpl generalService;
 
+    @Autowired
     TeamServiceImpl teamService;
-
-    /**
-     * Add a new student
-     * @param student the student object to be created
-     * @return a boolean, true if created correctly, false otherwise
-     */
-    @PreAuthorize("hasRole('ROLE_TEACHER')")
-    @Override
-    public boolean addStudent(StudentDTO student) {
-        // check if the student with the same id is already present in the db
-        if(this.generalService.getStudent(student.getId()).isPresent()){
-            return false;
-        }
-        this.studentRepository.save(modelMapper.map(student, Student.class));
-        return true;
-    }
 
     /**
      * Add a course that is not already present in the db
@@ -80,11 +70,16 @@ public class TeacherServiceImp implements TeacherService {
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public boolean addCourse(CourseDTO course, VMModelDTO vmModelDTO) {
+    public boolean addCourse(CourseDTO course, String teacherId, VMModelDTO vmModelDTO) {
         VMModel vmModel = new VMModel();
 
         // check if there is already a course with the same name
         if(generalService.getCourse(course.getName()).isPresent()){
+            return false;
+        }
+
+        // check if the teacher exists
+        if(!teacherRepository.findById(teacherId).isPresent()){
             return false;
         }
 
@@ -101,19 +96,26 @@ public class TeacherServiceImp implements TeacherService {
 
         this.vmModelRepository.save(vmModel);
 
+        // set the teacher to the course
+        this.addTeacherToCourse(teacherId, course.getName());
+
         return true;
     }
 
     /**
      * remove a course
-     * @param course the courseDTO object to remove
+     * @param coursename the name of the course
      * @return true if successful;
      * false otherwise.
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public boolean removeCourse(CourseDTO course) {
-        Optional<Course> courseOptional = this.courseRepository.findById(course.getName());
+    public boolean removeCourse(String coursename) {
+        Optional<Course> courseOptional = this.courseRepository.findById(coursename);
+        List<Student> courseStudents = new ArrayList<>();
+        List<Teacher> courseTeachers = new ArrayList<>();
+        List<Assignment> courseAssignments = new ArrayList<>();
+        List<Team> courseTeams = new ArrayList<>();
         VMModel tempvm;
 
         // check if the course exists
@@ -122,10 +124,12 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         // removing the students from the course
-        courseOptional.get().getStudents().forEach(x -> courseOptional.get().removeStudent(x));
+        courseOptional.get().getStudents().forEach(x -> courseStudents.add(x));
+        courseStudents.forEach(x -> courseOptional.get().removeStudent(x));
 
         // removing the teachers from the course
-        courseOptional.get().getTeachers().forEach(x -> courseOptional.get().removeTeacher(x));
+        courseOptional.get().getTeachers().forEach(x -> courseTeachers.add(x));
+        courseTeachers.forEach(x -> courseOptional.get().removeTeacher(x));
 
         // storing the virtual machine to remove
         tempvm = this.vmModelRepository.findById(courseOptional.get().getVmModel().getId()).get();
@@ -137,14 +141,14 @@ public class TeacherServiceImp implements TeacherService {
         this.vmModelRepository.deleteById(tempvm.getId());
 
         // removing the assignments from the course
-        courseOptional.get().getAssignments().stream()
-                .map(x -> modelMapper.map(x, AssignmentDTO.class))
-                .forEach(x -> removeAssignment(x, courseOptional.get().getName()));
+        courseOptional.get().getAssignments().forEach(x -> courseAssignments.add(x));
+        courseAssignments.forEach(x -> removeAssignment(x.getId(), coursename));
 
         // removing the teams from the course
-        courseOptional.get().getTeams().forEach(x -> this.teamService.evictTeam(x.getId()));
+        courseOptional.get().getTeams().forEach(x -> courseTeams.add(x));
+        courseTeams.forEach(x -> this.teamService.evictTeam(x.getId()));
 
-        this.courseRepository.deleteById(course.getName());
+        this.courseRepository.deleteById(coursename);
 
         return true;
     }
@@ -251,6 +255,13 @@ public class TeacherServiceImp implements TeacherService {
         return true;
     }
 
+    /**
+     * Add a teacher to a course
+     * @param teacherId the teacher id
+     * @param courseName the name of the course
+     * @return true for success;
+     *          false if fail.
+     */
     @Override
     public boolean addTeacherToCourse(String teacherId, String courseName) {
         Optional<Course> courseOptional = courseRepository.findById(courseName);
@@ -435,20 +446,6 @@ public class TeacherServiceImp implements TeacherService {
     }
 
     /**
-     * Add a list of new students
-     * @param students the list of new students to add
-     * @return a boolean list, the value of the list is true if the
-     *         respective student was added correctly, false otherwise
-     */
-    @PreAuthorize("hasRole('ROLE_TEACHER')")
-    @Override
-    public List<Boolean> addAll(List<StudentDTO> students) {
-        return students.stream()
-                .map(x -> this.addStudent(x))
-                .collect(Collectors.toList());
-    }
-
-    /**
      * Enroll to an existing course a list of existing students
      * @param studentIds the list of students to add to the course
      * @param courseName the course name to add students to
@@ -458,6 +455,19 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public List<Boolean> enrollAll(List<String> studentIds, String courseName) {
+        long studentsNotPresent;
+
+        // check if the students are present
+        studentsNotPresent = studentIds
+                .stream()
+                .map(x -> this.studentRepository.findById(x).isPresent())
+                .filter(x -> !x)
+                .count();
+
+        if(studentsNotPresent > 0){
+            throw new StudentNotFoundExeption();
+        }
+
         return studentIds.stream()
                 .map(x -> this.addStudentToCourse(x,courseName))
                 .collect(Collectors.toList());
@@ -473,7 +483,7 @@ public class TeacherServiceImp implements TeacherService {
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public List<Boolean> addAndEnroll(Reader r, String courseName) {
+    public List<Boolean> enrollCSV(Reader r, String courseName) {
         // create a csv reader
         CsvToBean<StudentDTO> csvToBean = new CsvToBeanBuilder(r)
                 .withType(StudentDTO.class)
@@ -482,9 +492,6 @@ public class TeacherServiceImp implements TeacherService {
 
         // convert `CsvToBean` object to list of students
         List<StudentDTO> studentDTOS = csvToBean.parse();
-
-        // add all the students to the db
-        this.addAll(studentDTOS);
 
         // enroll all students to the course
         return enrollAll(
@@ -537,13 +544,30 @@ public class TeacherServiceImp implements TeacherService {
     }
 
     /**
+     * Get a virtual machine
+     * @param vmId the id of the virtual machine
+     * @return the virtual machine DTO
+     */
+    @Override
+    public VirtualMachineDTO getTeamVirtualMachine(Long vmId) {
+        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
+
+        // check if the virtual machine exists
+        if (!virtualMachineOptional.isPresent()){
+            throw new TeacherServiceException("This virtual machine does not exists");
+        }
+
+        return modelMapper.map(virtualMachineOptional.get(), VirtualMachineDTO.class);
+    }
+
+    /**
      * create an assignment for a course
      * @param assignment the new assignment
      * @param courseName course's name to which the assignment refers
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public void createAssignment(AssignmentDTO assignment, String courseName) {
+    public AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName) {
         Assignment newAssignemt = new Assignment();
         Optional<Course> courseOptional = courseRepository.findById(courseName);
 
@@ -573,6 +597,9 @@ public class TeacherServiceImp implements TeacherService {
         newAssignemt.setPathImage(assignment.getPathImage());
         newAssignemt.setCourse(courseOptional.get());
 
+        // save the assignment
+        this.assignmentRepository.save(newAssignemt);
+
         // create homework with a delivery with the NULL status for all students
         courseOptional.get().getStudents()
                 .forEach(x -> {
@@ -584,25 +611,26 @@ public class TeacherServiceImp implements TeacherService {
                     // adding a delivery to the homework with NULL state
                     firstDelivery.setHomework(studentHomework);
                     firstDelivery.setStatus(Delivery.Status.NULL);
+                    firstDelivery.setPathImage("da/cambiare");
                     firstDelivery.setTimestamp(new Timestamp(System.currentTimeMillis()));
+                    this.homeworkRepository.save(studentHomework);
+                    this.deliveryRepository.save(firstDelivery);
                 });
 
-        // save the assignment
-        this.assignmentRepository.save(newAssignemt);
-
+        return modelMapper.map(newAssignemt, AssignmentDTO.class);
     }
 
     /**
      * remore an assignment and all relations with other entities
-     * @param assignment the assignment to remove
+     * @param assignmentId the assignment to remove
      * @param courseName the course to which the assignment belongs
      */
     @Override
-    public void removeAssignment(AssignmentDTO assignment, String courseName) {
+    public void removeAssignment(Long assignmentId, String courseName) {
         Optional<Course> courseOptional = courseRepository.findById(courseName);
-        Optional<Assignment> assignmentOptional = assignmentRepository.findById(assignment.getId());
+        Optional<Assignment> assignmentOptional = assignmentRepository.findById(assignmentId);
         List<Delivery> tempdeliveries;
-        List<Homework> temphomeworks;
+        List<Homework> temphomeworks = new ArrayList<>();
 
         // check if the course exists
         if(!courseOptional.isPresent()){
@@ -627,7 +655,7 @@ public class TeacherServiceImp implements TeacherService {
         tempdeliveries.forEach(x -> this.deliveryRepository.deleteById(x.getId()));
 
         // store the homeworks to remove
-        temphomeworks = assignmentOptional.get().getHomeworks();
+        assignmentOptional.get().getHomeworks().forEach(x -> temphomeworks.add(x));
 
         // remove the homeworks from the student
         temphomeworks.forEach(x -> x.getStudent().removeHomework(x));
@@ -642,10 +670,14 @@ public class TeacherServiceImp implements TeacherService {
         assignmentOptional.get().setCourse(null);
 
         // remove the assignment
-        assignmentRepository.deleteById(assignment.getId());
+        assignmentRepository.deleteById(assignmentId);
 
     }
 
+    /**
+     * Assign a mark to an homework
+     * @param homework the homework to evaluate
+     */
     @Override
     public void assignMarkToHomework(HomeworkDTO homework) {
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homework.getId());
@@ -665,6 +697,11 @@ public class TeacherServiceImp implements TeacherService {
 
     }
 
+    /**
+     * Upload the revision of the teacher
+     * @param homeworkDTO the homework to review
+     * @param multipartFile the review of the teacher
+     */
     @Override
     public void revisionDelivery(HomeworkDTO homeworkDTO, MultipartFile multipartFile) {
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
@@ -687,9 +724,15 @@ public class TeacherServiceImp implements TeacherService {
 
     }
 
+
+    /**
+     * Retrieve the image of the assignment
+     * @param assignmentId the id of the assignment
+     * @return the image of the assignment
+     */
     @Override
-    public byte[] getAssignmentImage(AssignmentDTO assignmentDTO) {
-        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentDTO.getId());
+    public byte[] getAssignmentImage(Long assignmentId) {
+        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
         BufferedImage bufferedImage;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -699,7 +742,7 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         try {
-            bufferedImage = ImageIO.read(new File(assignmentDTO.getPathImage()));
+            bufferedImage = ImageIO.read(new File(assignmentOptional.get().getPathImage()));
             ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
         }
         catch (IOException e){

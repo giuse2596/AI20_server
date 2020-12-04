@@ -12,6 +12,7 @@ import javax.persistence.*;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -37,7 +38,7 @@ public class User implements UserDetails {
     private String password;
 
     @NotBlank
-    private String serialNumber;
+    private String username;
 
     @NotBlank
     private String name;
@@ -45,7 +46,7 @@ public class User implements UserDetails {
     @NotBlank
     private String firstname;
 
-    @NotEmpty
+    @NotNull
     private boolean active;
 
     @ElementCollection(fetch = FetchType.EAGER)

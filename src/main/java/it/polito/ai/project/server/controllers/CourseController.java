@@ -58,7 +58,7 @@ public class CourseController {
         Optional<CourseDTO> course = generalService.getCourse(name);
 
         if(!course.isPresent()){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, name);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, name);
         }
         return modelHelper.enrich(course.get());
     }
@@ -70,11 +70,19 @@ public class CourseController {
      */
     @GetMapping("/{name}/enrolled")
     public List<StudentDTO> enrolledStudents(@PathVariable String name){
+        List<StudentDTO> students;
 
-        return teacherService.getEnrolledStudents(name)
-                .stream()
-                .map(x -> modelHelper.enrich(x))
-                .collect(Collectors.toList());
+        try{
+            students = teacherService.getEnrolledStudents(name)
+                    .stream()
+                    .map(x -> modelHelper.enrich(x))
+                    .collect(Collectors.toList());
+        }
+        catch (CourseNotFoundException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, name);
+        }
+
+        return students;
     }
 
     /**
@@ -85,10 +93,11 @@ public class CourseController {
      */
     @PostMapping({"","/"})
     public CourseDTO addCourse(@Valid @RequestBody CourseDTO courseDTO,
-                               @Valid @RequestBody VMModelDTO vmModelDTO){
+                               @Valid @RequestBody VMModelDTO vmModelDTO,
+                               @RequestParam String teacherId){
 
         try {
-            if (!teacherService.addCourse(courseDTO, vmModelDTO)) {
+            if (!teacherService.addCourse(courseDTO, teacherId, vmModelDTO)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, courseDTO.getName());
             }
         }
@@ -138,7 +147,7 @@ public class CourseController {
         catch (IOException e){
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
-        return teacherService.addAndEnroll(reader, name);
+        return teacherService.enrollCSV(reader, name);
     }
 
     /**

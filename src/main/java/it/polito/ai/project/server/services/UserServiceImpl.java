@@ -44,6 +44,7 @@ public class UserServiceImpl implements UserService{
             throw new UserServiceException();
         }
 
+        user.setUsername(userDTO.getUsername());
         user.setName(userDTO.getName());
         user.setFirstname(userDTO.getFirstname());
         user.setEmail(userDTO.getEmail());
@@ -53,12 +54,12 @@ public class UserServiceImpl implements UserService{
 
         user = this.userRepository.save(user);
 
-        student.setId(userDTO.getSerialNumber());
+        student.setId(userDTO.getUsername());
         student.setEmail(userDTO.getEmail());
         student.setName(userDTO.getName());
         student.setFirstname(userDTO.getFirstname());
         student.setPathImage("default/path/image"); // CHANGE
-        student.setUserId(this.userRepository.findByUsername(userDTO.getEmail()).get().getId());
+        student.setUserId(user.getId());
 
         this.studentRepository.save(student);
 
@@ -76,6 +77,7 @@ public class UserServiceImpl implements UserService{
             throw new UserServiceException();
         }
 
+        user.setUsername(userDTO.getUsername());
         user.setName(userDTO.getName());
         user.setFirstname(userDTO.getFirstname());
         user.setEmail(userDTO.getEmail());
@@ -85,12 +87,12 @@ public class UserServiceImpl implements UserService{
 
         user = this.userRepository.save(user);
 
-        teacher.setId(userDTO.getSerialNumber());
+        teacher.setId(userDTO.getUsername());
         teacher.setEmail(userDTO.getEmail());
         teacher.setName(userDTO.getName());
         teacher.setFirstname(userDTO.getFirstname());
         teacher.setPathImage("default/path/image"); // CHANGE
-        teacher.setUserId(this.userRepository.findByUsername(userDTO.getEmail()).get().getId());
+        teacher.setUserId(user.getId());
 
         this.teacherRepository.save(teacher);
 

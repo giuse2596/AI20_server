@@ -111,7 +111,11 @@ public class NotificationServiceImpl implements NotificationService{
                             (!x.getId().equals(teamOptional.get().getId())) &&
                             (x.getCourse().getName().equals(teamOptional.get().getCourse().getName()))
                             )
-                    .forEach(x -> this.teamService.evictTeam(x.getId()));
+                    .forEach(x -> {
+                        this.teamService.evictTeam(x.getId());
+                        this.tokenRepository.findAllByTeamId(x.getId())
+                                .forEach(y -> this.tokenRepository.delete(y));
+                    });
         }
 
         this.tokenRepository.deleteById(token);
@@ -146,27 +150,35 @@ public class NotificationServiceImpl implements NotificationService{
         ts = new Timestamp(cal.getTime().getTime());
 
         for(String student : memberIds){
-            Token t = new Token();
-            t.setExpiryDate(ts);
-            t.setTeamId(dto.getId());
-            t.setStudentId(student);
-            t.setId(UUID.randomUUID().toString());
-            this.tokenRepository.save(t);
 
-            s1 = WebMvcLinkBuilder.linkTo(NotificationController.class)
-                                .slash("confirm")
-                                .slash(t.getId()).toString();
+            // the the token is not sent to the proposer, doing so
+            // is like he confirmed the link sent by email,
+            // the function getConfirmedMembersTeam in TeamServiceImpl
+            // does not return him
+            if(!dto.getProposer().equals(student)){
 
-            s2 = WebMvcLinkBuilder.linkTo(NotificationController.class)
-                                .slash("reject")
-                                .slash(t.getId()).toString();
+                Token t = new Token();
+                t.setExpiryDate(ts);
+                t.setTeamId(dto.getId());
+                t.setStudentId(student);
+                t.setId(UUID.randomUUID().toString());
+                this.tokenRepository.save(t);
 
-            email = student + "@studenti.polito.it";
+                s1 = WebMvcLinkBuilder.linkTo(NotificationController.class)
+                        .slash("confirm")
+                        .slash(t.getId()).toString();
 
-            sendMessage(email,
+                s2 = WebMvcLinkBuilder.linkTo(NotificationController.class)
+                        .slash("reject")
+                        .slash(t.getId()).toString();
+
+                email = student + "@studenti.polito.it";
+
+                sendMessage(email,
                         "Invitation to group " + dto.getName(),
-                            "confirm at: " + s1 + " or reject at: " + s2);
+                        "confirm at: " + s1 + " or reject at: " + s2);
 
+            }
         }
 
     }
@@ -226,8 +238,8 @@ public class NotificationServiceImpl implements NotificationService{
 
         Properties props = mailSender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
-        props.put("mail.smtp.auth", SMTP_AUTH);
-        props.put("mail.smtp.starttls.enable", SMTP_STARTTLS);
+        //props.put("mail.smtp.auth", SMTP_AUTH);
+        //props.put("mail.smtp.starttls.enable", SMTP_STARTTLS);
         props.put("mail.debug", "true");
 
         return mailSender;

@@ -20,10 +20,10 @@ public class Assignment {
     @NotBlank
     private String name;
 
-    @NotEmpty
+    @NotNull
     private Date releaseDate;
 
-    @NotEmpty
+    @NotNull
     private Date expiryDate;
 
     @NotBlank

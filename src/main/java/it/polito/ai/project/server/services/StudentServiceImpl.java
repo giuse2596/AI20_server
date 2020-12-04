@@ -59,7 +59,7 @@ public class StudentServiceImpl implements StudentService{
 
         Optional<Team> teamOptional = this.teamRepository.findById(teamId);
         Optional<Student> studentOptional = this.studentRepository.findById(owner);
-        VirtualMachine virtualMachine;
+        VirtualMachine virtualMachine = new VirtualMachine();
 
         // check if the team exist
         if(!teamOptional.isPresent()){
@@ -136,14 +136,12 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // create the virtual machine
-        virtualMachine = VirtualMachine.builder()
-                                        .name(virtualMachineDTO.getName())
-                                        .cpu(virtualMachineDTO.getCpu())
-                                        .diskSpace(virtualMachineDTO.getDiskSpace())
-                                        .ram(virtualMachineDTO.getRam())
-                                        .active(false)
-                                        .build();
-
+        virtualMachine.setName(virtualMachineDTO.getName());
+        virtualMachine.setCpu(virtualMachineDTO.getCpu());
+        virtualMachine.setDiskSpace(virtualMachineDTO.getDiskSpace());
+        virtualMachine.setRam(virtualMachineDTO.getRam());
+        virtualMachine.setPathImage("da/cambiare");
+        virtualMachine.setActive(false);
         virtualMachine.setTeam(teamOptional.get());
         virtualMachine.addOwner(studentOptional.get());
 
@@ -166,6 +164,11 @@ public class StudentServiceImpl implements StudentService{
         // check if the vm exists
         if (!virtualMachineOptional.isPresent()) {
             throw new StudentServiceException("Virtual machine doesn't exists");
+        }
+
+        // check if the vm is active
+        if (!virtualMachineOptional.get().isActive()){
+            throw new StudentServiceException("Virtual machine is not active");
         }
 
         // check if the student exists
@@ -481,14 +484,14 @@ public class StudentServiceImpl implements StudentService{
 
     /**
      * Function to upload a delivery for a student homework
-     * @param homeworkDTO homeworkDTO with the information of the student homework
+     * @param homeworkId homework id
      * @param path path where to save the multipartFile
      * @param multipartFile file to store
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
-    public void uploadDelivery(HomeworkDTO homeworkDTO, String path, MultipartFile multipartFile){
-        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
+    public void uploadDelivery(Long homeworkId, String path, MultipartFile multipartFile){
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         Date deliveryDate = Date.valueOf(timestamp.toLocalDateTime().toLocalDate());
         Delivery delivery = new Delivery();
@@ -524,6 +527,7 @@ public class StudentServiceImpl implements StudentService{
 //        {
 //            dirPath.mkdir();
 //        }
+
         try {
             multipartFile.transferTo(dirPath);
         }

@@ -8,11 +8,9 @@ import it.polito.ai.project.server.services.TeacherService;
 import it.polito.ai.project.server.services.TeamService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import javax.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -54,30 +52,9 @@ public class StudentController {
         Optional<StudentDTO> student = generalService.getStudent(id);
 
         if(!student.isPresent()){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
         }
         return modelHelper.enrich(student.get());
-    }
-
-    /**
-     * URL to create a student
-     * @param studentDTO the student object
-     * @return the student enriched with the  URL to the student services
-     */
-    @PostMapping({"","/"})
-    public StudentDTO addStudent(@Valid @RequestBody StudentDTO studentDTO){
-
-        try {
-
-            if (!teacherService.addStudent(studentDTO)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, studentDTO.getId());
-            }
-        }
-        catch (TransactionSystemException e){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
-        }
-
-        return modelHelper.enrich(generalService.getStudent(studentDTO.getId()).get());
     }
 
     /**

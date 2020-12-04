@@ -5,6 +5,7 @@ import lombok.Data;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 @Entity
 @Data
@@ -13,7 +14,7 @@ public class RegistrationToken {
     @Id
     private String id;
 
-    @NotBlank
+    @NotNull
     private Long userId;
 
 }

@@ -8,6 +8,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Entity
 @Data
@@ -23,22 +24,22 @@ public class Team {
     @NotBlank
     private String proposer;
 
-    @NotEmpty
+    @NotNull
     private boolean active;
 
-    @NotEmpty
+    @NotNull
     private Integer cpuMax;
 
-    @NotEmpty
+    @NotNull
     private Integer ramMax;
 
-    @NotEmpty
+    @NotNull
     private Integer diskSpaceMax;
 
-    @NotEmpty
+    @NotNull
     private int totVM;
 
-    @NotEmpty
+    @NotNull
     private int activeVM;
 
     // the size of this list must be < than totVM

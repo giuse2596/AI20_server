@@ -20,13 +20,13 @@ public class Course {
     @NotBlank
     private String acronym;
 
-    @NotEmpty
+    @NotNull
     private Integer min;
 
-    @NotEmpty
+    @NotNull
     private Integer max;
 
-    @NotEmpty
+    @NotNull
     private boolean enabled;
 
     @ManyToMany(mappedBy = "courses")

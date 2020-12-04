@@ -2,16 +2,17 @@ package it.polito.ai.project.server.entities;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Data
-@Builder
 public class VirtualMachine {
     @Id
     @GeneratedValue
@@ -23,17 +24,17 @@ public class VirtualMachine {
     @NotBlank
     private String pathImage;
 
-    @NotEmpty
+    @NotNull
     private Integer cpu;
 
-    @NotEmpty
+    @NotNull
     private Integer ram;
 
-    @NotEmpty
+    @NotNull
     private Integer diskSpace;
 
     // status virtual machine
-    @NotBlank
+    @NotNull
     private boolean active;
 
     @ManyToOne
@@ -41,8 +42,8 @@ public class VirtualMachine {
     Team team;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
-    @JoinTable(name="vm_owners", joinColumns = @JoinColumn(name="student_id"),
-            inverseJoinColumns = @JoinColumn(name="vm_id") )
+    @JoinTable(name="vm_owners", joinColumns = @JoinColumn(name="vm_id"),
+            inverseJoinColumns = @JoinColumn(name="student_id") )
     List<Student> owners = new ArrayList<>();
 
     public void setTeam(Team team){

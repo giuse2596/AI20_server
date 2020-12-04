@@ -5,6 +5,7 @@ import lombok.Data;
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +29,7 @@ public class Student {
     @NotBlank
     private String email;
 
-    @NotEmpty
+    @NotNull
     private Long userId;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
