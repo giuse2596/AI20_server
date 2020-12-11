@@ -7,17 +7,17 @@ import it.polito.ai.project.server.entities.*;
 import it.polito.ai.project.server.repositories.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.imageio.ImageIO;
 import javax.transaction.Transactional;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +64,32 @@ public class TeacherServiceImp implements TeacherService {
     TeamServiceImpl teamService;
 
     /**
+     * Function to see if a theacher belongs to a course
+     * @param teahcerId teahcer id
+     * @param courseName course name
+     * @return true if the course is among the teacher ones
+     */
+    @Override
+    public boolean teacherInCourse(String teahcerId, String courseName) {
+        Optional<Teacher> teacherOptional = this.teacherRepository.findById(teahcerId);
+
+        if(!teacherOptional.isPresent()){
+            throw new TeacherServiceException("Teacher not found");
+        }
+
+        // check if the teacher is in the course
+        if(!teacherOptional.get().getCourses()
+                .stream()
+                .map(x -> x.getName())
+                .collect(Collectors.toList())
+                .contains(courseName)){
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Add a course that is not already present in the db
      * @param course the course with all the specs
      * @return boolean, true if is created correctly, false otherwise
@@ -82,6 +108,9 @@ public class TeacherServiceImp implements TeacherService {
         if(!teacherRepository.findById(teacherId).isPresent()){
             return false;
         }
+
+        // set the course enabled
+        course.setEnabled(true);
 
         vmModel.setCpuMax(vmModelDTO.getCpuMax());
         vmModel.setRamMax(vmModelDTO.getRamMax());
@@ -125,7 +154,7 @@ public class TeacherServiceImp implements TeacherService {
 
         // removing the students from the course
         courseOptional.get().getStudents().forEach(x -> courseStudents.add(x));
-        courseStudents.forEach(x -> courseOptional.get().removeStudent(x));
+        courseStudents.forEach(x -> this.removeStudentToCourse(x.getId(), coursename));
 
         // removing the teachers from the course
         courseOptional.get().getTeachers().forEach(x -> courseTeachers.add(x));
@@ -271,10 +300,12 @@ public class TeacherServiceImp implements TeacherService {
         if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
+
         // check if the teacher exist
         if(!teacherOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
+
         // check if the course is enabled
         if(!courseOptional.get().isEnabled()){
             return false;
@@ -303,6 +334,8 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         courseOptional.get().addTeacher(teacherOptional.get());
+
+        this.courseRepository.save(courseOptional.get());
 
         return true;
     }
@@ -544,32 +577,19 @@ public class TeacherServiceImp implements TeacherService {
     }
 
     /**
-     * Get a virtual machine
-     * @param vmId the id of the virtual machine
-     * @return the virtual machine DTO
-     */
-    @Override
-    public VirtualMachineDTO getTeamVirtualMachine(Long vmId) {
-        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
-
-        // check if the virtual machine exists
-        if (!virtualMachineOptional.isPresent()){
-            throw new TeacherServiceException("This virtual machine does not exists");
-        }
-
-        return modelMapper.map(virtualMachineOptional.get(), VirtualMachineDTO.class);
-    }
-
-    /**
      * create an assignment for a course
      * @param assignment the new assignment
      * @param courseName course's name to which the assignment refers
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName) {
+    public AssignmentDTO createAssignment(AssignmentDTO assignment,
+                                          String courseName, MultipartFile multipartFile) {
         Assignment newAssignemt = new Assignment();
         Optional<Course> courseOptional = courseRepository.findById(courseName);
+        File newFile;
+        InputStream inputStream = null;
+        OutputStream outputStream = null;
 
         // check if the course exists
         if(!courseOptional.isPresent()){
@@ -592,13 +612,36 @@ public class TeacherServiceImp implements TeacherService {
 
         // create the assignment
         newAssignemt.setName(assignment.getName());
-        newAssignemt.setReleaseDate(assignment.getReleaseDate());
+        newAssignemt.setReleaseDate(new Date(new Timestamp(System.currentTimeMillis()).getTime()));
         newAssignemt.setExpiryDate(assignment.getExpiryDate());
-        newAssignemt.setPathImage(assignment.getPathImage());
         newAssignemt.setCourse(courseOptional.get());
 
         // save the assignment
         this.assignmentRepository.save(newAssignemt);
+
+        // set path of the file
+        newAssignemt.setPathImage("src/main/resources/images/assignments/" +
+                newAssignemt.getId().toString() +
+                ".png");
+
+        newFile = new File(newAssignemt.getPathImage());
+
+        try {
+            inputStream = multipartFile.getInputStream();
+
+            if (!newFile.exists()) {
+                newFile.getParentFile().mkdir();
+            }
+            outputStream = new FileOutputStream(newFile);
+            int read = 0;
+            byte[] bytes = new byte[1024];
+
+            while ((read = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, read);
+            }
+        } catch (IOException e) {
+            throw  new TeacherServiceException();
+        }
 
         // create homework with a delivery with the NULL status for all students
         courseOptional.get().getStudents()
@@ -611,7 +654,7 @@ public class TeacherServiceImp implements TeacherService {
                     // adding a delivery to the homework with NULL state
                     firstDelivery.setHomework(studentHomework);
                     firstDelivery.setStatus(Delivery.Status.NULL);
-                    firstDelivery.setPathImage("da/cambiare");
+                    firstDelivery.setPathImage("src/main/resources/images/deliveries/empty_image.png");
                     firstDelivery.setTimestamp(new Timestamp(System.currentTimeMillis()));
                     this.homeworkRepository.save(studentHomework);
                     this.deliveryRepository.save(firstDelivery);
@@ -699,12 +742,12 @@ public class TeacherServiceImp implements TeacherService {
 
     /**
      * Upload the revision of the teacher
-     * @param homeworkDTO the homework to review
+     * @param homeworkId the homework id
      * @param multipartFile the review of the teacher
      */
     @Override
-    public void revisionDelivery(HomeworkDTO homeworkDTO, MultipartFile multipartFile) {
-        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
+    public void revisionDelivery(Long homeworkId, MultipartFile multipartFile) {
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
         Delivery delivery = new Delivery();
 
         // check if the homework exists

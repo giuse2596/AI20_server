@@ -12,10 +12,7 @@ public interface StudentService {
     void stopVirtualMachine(Long vmId, String studentId);
     void deleteVirtualMachine(Long vmId, String studentId);
     void addVirtualMachineOwners(String owner, List<String> students, Long vmId);
-    VirtualMachineDTO getVirtualMachine(Long vmId);
-    byte[] getVirtualMachineImage(Long vmId);
-    void uploadDelivery(Long homeworkId, String path, MultipartFile multipartFile);
-    List<DeliveryDTO> getStudentDeliveries(Long homeworkId);
-    byte[] getDeliveryImage(DeliveryDTO deliveryDTO);
-    byte[] getAssignmentImage(AssignmentDTO assignmentDTO, StudentDTO studentDTO);
+    void uploadDelivery(Long homeworkId, MultipartFile multipartFile);
+    byte[] getDeliveryImage(Long deliveryId);
+    byte[] getAssignmentImage(Long assignmentId, String studentId);
 }

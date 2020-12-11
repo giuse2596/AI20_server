@@ -1,8 +1,9 @@
 package it.polito.ai.project.server.controllers;
 
 import it.polito.ai.project.server.dtos.UserDTO;
-import it.polito.ai.project.server.services.UserService;
-import it.polito.ai.project.server.services.UserServiceException;
+import it.polito.ai.project.server.entities.User;
+import it.polito.ai.project.server.repositories.UserRepository;
+import it.polito.ai.project.server.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
 import static org.springframework.http.ResponseEntity.ok;
@@ -24,6 +26,15 @@ public class UserinfoController {
 
     @Autowired
     UserService userService;
+
+    @Autowired
+    UserRepository userRepository;
+
+    @Autowired
+    NotificationService notificationService;
+
+    @Autowired
+    GeneralService generalService;
 
     @GetMapping("/me")
     public ResponseEntity currentUser(@AuthenticationPrincipal UserDetails userDetails){
@@ -41,15 +52,16 @@ public class UserinfoController {
     @ResponseStatus(HttpStatus.CREATED)
     public void register(@Valid @RequestBody UserDTO userDTO){
         String[] splittedEmail = userDTO.getEmail().trim().split("@");
+        UserDTO user;
 
         try {
             // student registration
             if (splittedEmail[1].equals("studenti.polito.it")) {
-                this.userService.registerStudent(userDTO);
+                user = this.userService.registerStudent(userDTO);
             }
             // teacher registration
             else if (splittedEmail[1].equals("polito.it")) {
-                this.userService.registerTeacher(userDTO);
+                user = this.userService.registerTeacher(userDTO);
             } else {
                 // received an invalid email
                 throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, "Invalid email");
@@ -57,6 +69,25 @@ public class UserinfoController {
         }
         catch (UserServiceException e){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User already exists");
+        }
+
+        this.notificationService.notifyInscription(user);
+    }
+
+    @PutMapping("/modify_user")
+    public UserDTO modifyUser(@RequestBody UserDTO userDTO,
+                              @AuthenticationPrincipal UserDetails userDetails){
+        Optional<User> userOptional = this.userRepository.findByUsername(userDetails.getUsername());
+
+        if(!userOptional.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+        try{
+            return this.generalService.modifyUser(userDTO);
+        }
+        catch (GeneralServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
 
     }

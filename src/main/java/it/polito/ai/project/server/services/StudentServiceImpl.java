@@ -372,7 +372,7 @@ public class StudentServiceImpl implements StudentService{
 
         // check if the owner exist
         if(!studentOptional.isPresent()){
-            throw new StudentServiceException("Owner doesn't exist");
+            throw new StudentNotFoundExeption();
 
         }
 
@@ -416,81 +416,13 @@ public class StudentServiceImpl implements StudentService{
     }
 
     /**
-     * Get an existing virtual machine
-     * @param vmId the virtual machine id
-     * @return the virtual machine DTO
-     */
-    @Override
-    public VirtualMachineDTO getVirtualMachine(Long vmId){
-        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
-
-        // check if the vm exists
-        if(!virtualMachineOptional.isPresent()){
-            throw new StudentServiceException("Virtual machine doesn't exist");
-        }
-
-        // check if the course is enabled
-        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
-            throw new StudentServiceException("Course not enabled");
-        }
-
-        // check if the team is active
-        if(!virtualMachineOptional.get().getTeam().isActive()){
-            throw new StudentServiceException("Team not active");
-        }
-
-        return this.modelMapper.map(virtualMachineOptional.get(),
-                                    VirtualMachineDTO.class);
-    }
-
-
-    /**
-     * Get an existing virtual machine
-     * @param vmId the virtual machine id
-     * @return the virtual machine image
-     */
-    @Override
-    public byte[] getVirtualMachineImage(Long vmId){
-        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
-        BufferedImage bufferedImage;
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-
-        // check if the vm exists
-        if(!virtualMachineOptional.isPresent()){
-            throw new StudentServiceException("Virtual machine doesn't exist");
-        }
-
-        // check if the course is enabled
-        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
-            throw new StudentServiceException("Course not enabled");
-        }
-
-        // check if the team is active
-        if(!virtualMachineOptional.get().getTeam().isActive()){
-            throw new StudentServiceException("Team not active");
-        }
-
-        try {
-            bufferedImage = ImageIO.read(new File(virtualMachineOptional.get().getPathImage()));
-            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
-        }
-        catch (IOException e){
-            throw new StudentServiceException();
-        }
-
-        return byteArrayOutputStream.toByteArray();
-    }
-
-
-    /**
      * Function to upload a delivery for a student homework
      * @param homeworkId homework id
-     * @param path path where to save the multipartFile
      * @param multipartFile file to store
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
-    public void uploadDelivery(Long homeworkId, String path, MultipartFile multipartFile){
+    public void uploadDelivery(Long homeworkId, MultipartFile multipartFile){
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         Date deliveryDate = Date.valueOf(timestamp.toLocalDateTime().toLocalDate());
@@ -511,7 +443,7 @@ public class StudentServiceImpl implements StudentService{
             throw new StudentServiceException("Delivery date expired");
         }
 
-        delivery.setPathImage(path);
+        delivery.setPathImage("da/cambiare");
         delivery.setStatus(Delivery.Status.DELIVERED);
         delivery.setTimestamp(timestamp);
         delivery.setHomework(homeworkOptional.get());
@@ -520,7 +452,7 @@ public class StudentServiceImpl implements StudentService{
 
         // path passed as:
         // String path = request.getSession().getServletContext().getRealPath("/tmp/...");
-        File dirPath = new File(path + delivery.getId().toString());
+        File dirPath = new File(delivery.getPathImage() + delivery.getId().toString());
 
         //check destination exists, if not create it
 //        if(!dirPath.exists())
@@ -533,40 +465,20 @@ public class StudentServiceImpl implements StudentService{
         }
         catch (IllegalStateException | IOException e)
         {
-            e.printStackTrace();
+            //e.printStackTrace();
+            throw new StudentServiceException("Error saving the file");
         }
 
-    }
-
-    /**
-     * Function to retrieve all the deleveries given a student homework
-     * @param homeworkId the student homework id
-     * @return list of all the deliveries for the specified homework
-     */
-    @Override
-    public List<DeliveryDTO> getStudentDeliveries(Long homeworkId){
-        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
-
-        // check if the homework exists
-        if (!homeworkOptional.isPresent()) {
-            throw new StudentServiceException();
-        }
-
-        return homeworkOptional.get()
-                                .getDeliveries()
-                                .stream()
-                                .map(x -> modelMapper.map(x, DeliveryDTO.class))
-                                .collect(Collectors.toList());
     }
 
     /**
      * Function to get the image of the specified delivery
-     * @param deliveryDTO the dto to send containing delivery info
+     * @param deliveryId the id of the delivery
      * @return a byte array of the image associated to the delivery
      */
     @Override
-    public byte[] getDeliveryImage(DeliveryDTO deliveryDTO){
-        Optional<Delivery> deliveryOptional = this.deliveryRepository.findById(deliveryDTO.getId());
+    public byte[] getDeliveryImage(Long deliveryId){
+        Optional<Delivery> deliveryOptional = this.deliveryRepository.findById(deliveryId);
         BufferedImage bufferedImage;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -576,7 +488,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         try {
-            bufferedImage = ImageIO.read(new File(deliveryDTO.getPathImage()));
+            bufferedImage = ImageIO.read(new File(deliveryOptional.get().getPathImage()));
             ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
         }
         catch (IOException e){
@@ -589,14 +501,14 @@ public class StudentServiceImpl implements StudentService{
     /**
      * Function to get the image of a specified assignment and
      * mark as READ the student homework
-     * @param assignmentDTO the dto to send containing assignment info
-     * @param studentDTO the student dto
+     * @param assignmentId the assignment id
+     * @param studentId the student id
      * @return a byte array of the image associated to the assignment
      */
     @Override
-    public byte[] getAssignmentImage(AssignmentDTO assignmentDTO, StudentDTO studentDTO){
-        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentDTO.getId());
-        Optional<Student> studentOptional = this.studentRepository.findById(studentDTO.getId());
+    public byte[] getAssignmentImage(Long assignmentId, String studentId){
+        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
         BufferedImage bufferedImage;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         Delivery delivery = new Delivery();
@@ -616,7 +528,7 @@ public class StudentServiceImpl implements StudentService{
         homework = studentOptional.get()
                         .getHomeworks()
                         .stream()
-                        .filter(x -> x.getAssignment().getId().equals(assignmentDTO.getId()))
+                        .filter(x -> x.getAssignment().getId().equals(assignmentId))
                         .collect(Collectors.toList()).get(0);
 
         if (
@@ -631,7 +543,7 @@ public class StudentServiceImpl implements StudentService{
         }
 
         try {
-            bufferedImage = ImageIO.read(new File(assignmentDTO.getPathImage()));
+            bufferedImage = ImageIO.read(new File(assignmentOptional.get().getPathImage()));
             ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
         }
         catch (IOException e){

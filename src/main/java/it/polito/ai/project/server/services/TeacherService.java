@@ -7,6 +7,7 @@ import java.io.Reader;
 import java.util.List;
 
 public interface TeacherService {
+    boolean teacherInCourse(String teahcerId, String couseName);
     boolean addCourse(CourseDTO course, String teacherId, VMModelDTO vmModelDTO);
     boolean removeCourse(String coursename);
     void modifyCourse(String courseId, CourseDTO course);
@@ -20,10 +21,9 @@ public interface TeacherService {
     List<Boolean> enrollAll(List<String> studentIds, String courseName);
     List<Boolean> enrollCSV(Reader r, String courseName);
     void changeVMvalues(TeamDTO newTeam, String courseName);
-    VirtualMachineDTO getTeamVirtualMachine(Long vmId);
-    AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName);
+    AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName, MultipartFile multipartFile);
     void removeAssignment(Long assignmentId, String courseName);
     void assignMarkToHomework(HomeworkDTO homework);
-    void revisionDelivery(HomeworkDTO homeworkDTO, MultipartFile multipartFile);
+    void revisionDelivery(Long homeworkId, MultipartFile multipartFile);
     byte[] getAssignmentImage(Long assignmentId);
 }

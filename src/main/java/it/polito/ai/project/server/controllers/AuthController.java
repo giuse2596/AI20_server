@@ -4,6 +4,7 @@ import it.polito.ai.project.server.dtos.UserDTO;
 import it.polito.ai.project.server.entities.User;
 import it.polito.ai.project.server.repositories.UserRepository;
 import it.polito.ai.project.server.security.jwt.JwtTokenProvider;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,9 @@ public class AuthController {
     @Autowired
     UserRepository users;
 
+    @Autowired
+    ModelMapper modelMapper;
+
     @PostMapping("/login")
     public ResponseEntity login(@RequestBody UserDTO userDTO) {
         Optional<User> userOptional;
@@ -55,10 +59,7 @@ public class AuthController {
             throw new BadCredentialsException("Invalid username/password supplied");
         }
 
-        userOptional = this.users.findAll()
-                                .stream()
-                                .filter(x -> x.getUsername().equals(userDTO.getUsername()))
-                                .findFirst();
+        userOptional = this.users.findByUsername(userDTO.getUsername());
 
         if (!userOptional.isPresent()) {
             throw new BadCredentialsException("Invalid username/password supplied");
@@ -69,12 +70,12 @@ public class AuthController {
         }
 
         try {
-            username = userOptional.get().getUsername();
+            username = userDTO.getUsername();
 
             authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(
                                                                     username,
-                                                                    userOptional.get().getPassword()
+                                                                    userDTO.getPassword()
                                                                         )
                                 );
 
@@ -83,7 +84,7 @@ public class AuthController {
                     .getRoles());
 
             Map<Object, Object> model = new HashMap<>();
-            model.put("username", username);
+            model.put("user", modelMapper.map(userOptional.get(), UserDTO.class));
             model.put("token", token);
             return ok(model);
         }

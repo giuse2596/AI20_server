@@ -220,14 +220,11 @@ public class NotificationServiceImpl implements NotificationService{
 
         userOptional.get().setActive(true);
 
-        this.userRepository.save(userOptional.get());
-
         this.registrationTokenRepository.delete(registrationTokenOptional.get());
 
         return true;
     }
 
-    @Bean
     public JavaMailSender getJavaMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
         mailSender.setHost(MAIL_HOST);

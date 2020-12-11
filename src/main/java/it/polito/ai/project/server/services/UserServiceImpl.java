@@ -7,6 +7,7 @@ import it.polito.ai.project.server.entities.User;
 import it.polito.ai.project.server.repositories.StudentRepository;
 import it.polito.ai.project.server.repositories.TeacherRepository;
 import it.polito.ai.project.server.repositories.UserRepository;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -30,13 +31,13 @@ public class UserServiceImpl implements UserService{
     private TeacherRepository teacherRepository;
 
     @Autowired
-    private NotificationServiceImpl notificationService;
-
-    @Autowired
     private BCryptPasswordEncoder bCryptPasswordEncoder;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
     @Override
-    public void registerStudent(UserDTO userDTO) {
+    public UserDTO registerStudent(UserDTO userDTO) {
         User user = new User();
         Student student = new Student();
 
@@ -63,13 +64,11 @@ public class UserServiceImpl implements UserService{
 
         this.studentRepository.save(student);
 
-        // send activation email
-        userDTO.setId(user.getId());
-        this.notificationService.notifyInscription(userDTO);
+        return modelMapper.map(user, UserDTO.class);
     }
 
     @Override
-    public void registerTeacher(UserDTO userDTO) {
+    public UserDTO registerTeacher(UserDTO userDTO) {
         User user = new User();
         Teacher teacher = new Teacher();
 
@@ -96,8 +95,6 @@ public class UserServiceImpl implements UserService{
 
         this.teacherRepository.save(teacher);
 
-        // send activation email
-        userDTO.setId(user.getId());
-        this.notificationService.notifyInscription(userDTO);
+        return modelMapper.map(user, UserDTO.class);
     }
 }

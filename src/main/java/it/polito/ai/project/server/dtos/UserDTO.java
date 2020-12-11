@@ -28,7 +28,6 @@ public class UserDTO extends RepresentationModel<TeacherDTO> {
     @NotBlank
     private String firstname;
 
-    @NotNull
     private boolean active;
 
 }
