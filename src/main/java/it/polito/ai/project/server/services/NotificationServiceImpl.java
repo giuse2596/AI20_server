@@ -9,12 +9,9 @@ import it.polito.ai.project.server.repositories.TeamRepository;
 import it.polito.ai.project.server.repositories.TokenRepository;
 import it.polito.ai.project.server.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -26,7 +23,7 @@ import java.util.*;
 public class NotificationServiceImpl implements NotificationService{
 
     @Autowired
-    public JavaMailSender mailSender = this.getJavaMailSender();
+    public JavaMailSender mailSender;
 
     @Autowired
     public TokenRepository tokenRepository;
@@ -45,24 +42,6 @@ public class NotificationServiceImpl implements NotificationService{
 
     @Autowired
     public TeacherServiceImp teacherService;
-
-    @Value("${spring.mail.username}")
-    private String USERNAME;
-
-    @Value("${spring.mail.password}")
-    private String PWD;
-
-    @Value("${spring.mail.port}")
-    private int MAIL_PORT;
-
-    @Value("${spring.mail.host}")
-    private String MAIL_HOST;
-
-    @Value("${spring.mail.properties.mail.smtp.auth}")
-    private String SMTP_AUTH;
-
-    @Value("${spring.mail.properties.mail.smtp.starttls.enable}")
-    private String SMTP_STARTTLS;
 
     @Override
     public void sendMessage(String address, String subject, String body) {
@@ -225,20 +204,4 @@ public class NotificationServiceImpl implements NotificationService{
         return true;
     }
 
-    public JavaMailSender getJavaMailSender() {
-        JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-        mailSender.setHost(MAIL_HOST);
-        mailSender.setPort(MAIL_PORT);
-
-        mailSender.setUsername(USERNAME);
-        mailSender.setPassword(PWD);
-
-        Properties props = mailSender.getJavaMailProperties();
-        props.put("mail.transport.protocol", "smtp");
-        //props.put("mail.smtp.auth", SMTP_AUTH);
-        //props.put("mail.smtp.starttls.enable", SMTP_STARTTLS);
-        props.put("mail.debug", "true");
-
-        return mailSender;
-    }
 }
