@@ -240,6 +240,11 @@ public class CourseController {
 
     }
 
+    /**
+     * Retrieve the team's students
+     * @param teamid the team id
+     * @return the list of students that are in the team
+     */
     @GetMapping("/{name}/teams/{teamid}")
     public List<StudentDTO> getTeamMembers(@PathVariable Long teamid){
         try{
@@ -250,6 +255,12 @@ public class CourseController {
         }
     }
 
+    /**
+     * Retrieve the team's virtual machines
+     * @param teamid the team id
+     * @param userDetails the user who make the request
+     * @return the list of team's virtual machines
+     */
     @GetMapping("/{name}/teams/{teamid}/virtula_machines")
     public List<VirtualMachineDTO> getTeamVritualMachines(@PathVariable Long teamid,
                                                           @AuthenticationPrincipal UserDetails userDetails){
@@ -287,6 +298,13 @@ public class CourseController {
 
     }
 
+    /**
+     * Retrieve the image of a team's virtual machine
+     * @param teamid the team id
+     * @param vmid the virtual machine id
+     * @param userDetails the user who make the request
+     * @return the imagine of a virtual machine
+     */
     @GetMapping("/{name}/teams/{teamid}/virtual_machines/{vmid}/image")
     public byte[] getVirtualMachineImage(@PathVariable Long teamid,
                                          @PathVariable Long vmid,
@@ -353,6 +371,11 @@ public class CourseController {
         }
     }
 
+    /**
+     * Retrieve the assignment of a course
+     * @param assignmentid the assignment id
+     * @return the DTO of an assignment
+     */
     @GetMapping("/{name}/assignments/{assignmentid}")
     public AssignmentDTO getAssignment(@PathVariable Long assignmentid){
         Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentid);
@@ -370,6 +393,11 @@ public class CourseController {
 
     }
 
+    /**
+     * Retrieve all the course's assignments
+     * @param name the name of the course
+     * @return the list of all the assignments
+     */
     @GetMapping("/{name}/assignments")
     public List<AssignmentDTO> getCourseAssignments(@PathVariable String name){
         Optional<Course> courseOptional = this.courseRepository.findById(name);
@@ -386,6 +414,13 @@ public class CourseController {
         }
     }
 
+    /**
+     * Retrieve the deliveries of a student
+     * @param assignmentid the assignment id
+     * @param studentid the student id
+     * @param userDetails the user who make the request
+     * @return the list of all the deliveries for an assignment
+     */
     @GetMapping("/{name}/assignments/{assignmentid}/{studentid}")
     public List<DeliveryDTO> getAssignmentDeliveries(@PathVariable Long assignmentid,
                                                      @PathVariable String studentid,
@@ -410,6 +445,13 @@ public class CourseController {
         }
     }
 
+    /**
+     * Retrieve the last delivery of an assignment
+     * @param assignmentid the assignment id
+     * @param studentid the student id
+     * @param userDetails the user who make the request
+     * @return the last delivery of the student for an assignment
+     */
     @GetMapping("/{name}/assignments/{assignmentid}/{studentid}/last")
     public DeliveryDTO getAssignmentDelivery(@PathVariable Long assignmentid,
                                                      @PathVariable String studentid,
@@ -434,6 +476,11 @@ public class CourseController {
         }
     }
 
+    /**
+     * Delete a course
+     * @param name the name of the course
+     * @param userDetails the user who make the request
+     */
     @DeleteMapping("/{name}")
     @ResponseStatus(HttpStatus.OK)
     public void deleteCourse(@PathVariable String name,@AuthenticationPrincipal UserDetails userDetails){
@@ -457,6 +504,12 @@ public class CourseController {
         }
     }
 
+    /**
+     * Modify the course
+     * @param name the name of the course
+     * @param courseDTO the course modified
+     * @param userDetails the user who make the request
+     */
     @PutMapping("/{name}/modify")
     public void modifyCourse(@PathVariable String name, @RequestBody CourseDTO courseDTO,
                              @AuthenticationPrincipal UserDetails userDetails){
@@ -478,6 +531,11 @@ public class CourseController {
         }
     }
 
+    /**
+     * Add a teacher to a course
+     * @param name the name of the course
+     * @param teacherid the teacher id
+     */
     @PostMapping("/{name}/add_teacher/{teacherid}")
     @ResponseStatus(HttpStatus.OK)
     public void addTeacherToCourse(@PathVariable String name, @PathVariable String teacherid){
@@ -486,6 +544,12 @@ public class CourseController {
         }
     }
 
+    /**
+     * Remove a student from a course
+     * @param name the name of the course
+     * @param studentid the student id
+     * @param userDetails the user who make the request
+     */
     @DeleteMapping("/{name}/remove/{studentid}")
     public void removeStudentFromCourse(@PathVariable String name, @PathVariable String studentid,
                                         @AuthenticationPrincipal UserDetails userDetails){
@@ -507,6 +571,13 @@ public class CourseController {
 
     }
 
+    /**
+     * Retrieve the homework of a student
+     * @param assignmentsid the assignment id
+     * @param studentid the student id
+     * @param userDetails the user who make the request
+     * @return the homework DTO of the student
+     */
     @GetMapping("/{name}/assignments/{assignmentsid}/homeworks/{studentid}")
     public HomeworkDTO getStudentHomework(@PathVariable Long assignmentsid,
                                           @PathVariable String studentid,
@@ -530,6 +601,12 @@ public class CourseController {
         }
     }
 
+    /**
+     * Change values of a team
+     * @param name the name of the course
+     * @param team the team id
+     * @param userDetails the user who make the request
+     */
     @PutMapping("/{name}/teams/{teamid}")
     public void changeVMValues(@PathVariable String name, @RequestBody TeamDTO team,
                                @AuthenticationPrincipal UserDetails userDetails){
@@ -553,6 +630,14 @@ public class CourseController {
         }
     }
 
+    /**
+     * Create an assignment
+     * @param name the name of the course
+     * @param assignmentDTO the assignment to create
+     * @param multipartFile the image of the assignment
+     * @param userDetails the user who make the request
+     * @return the created assignment DTO
+     */
     @PostMapping("/{name}/assignments")
     public AssignmentDTO createAssignment(@PathVariable String name,
                                           //@RequestBody @Valid AssignmentFileDTO assignmentFileDTO,
@@ -584,6 +669,12 @@ public class CourseController {
         }
     }
 
+    /**
+     * Set the mark of an homework
+     * @param name the name of the course
+     * @param homeworkDTO the homework to evaluete
+     * @param userDetails the user who make the request
+     */
     @PutMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}")
     public void assignMarkToHomework(@PathVariable String name,
                                      @RequestBody HomeworkDTO homeworkDTO,
@@ -611,6 +702,13 @@ public class CourseController {
 
     }
 
+    /**
+     * Upload the teacher's revision for an homework
+     * @param name the name of the course
+     * @param homeworkid the homework id
+     * @param multipartFile the image of the revision
+     * @param userDetails the user who make the request
+     */
     @PostMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}")
     @ResponseStatus(HttpStatus.OK)
     public void revisionDelivery(@PathVariable String name,
@@ -634,6 +732,13 @@ public class CourseController {
         }
     }
 
+    /**
+     * Retrieve the assignment image
+     * @param name the name of the course
+     * @param assignmentid the assignment id
+     * @param userDetails the user who make the request
+     * @return the image of the assignment
+     */
     @GetMapping("/{name}/assignments/{assignmentid}/image")
     public byte[] getAssignmentImage(@PathVariable String name,
                                      @PathVariable Long assignmentid,

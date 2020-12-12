@@ -109,6 +109,13 @@ public class StudentController {
                 .getTeamsForStudent(id);
     }
 
+    /**
+     * Retrieve the students that confirm to join a team
+     * @param id the student id
+     * @param teamid the team id
+     * @param userDetails the user who make the request
+     * @return the list of students that confirm to join a team
+     */
     @GetMapping("/{id}/teams/{teamid}/confirmed_members")
     public List<StudentDTO> getConfirmedMembers(@PathVariable String id,
                                                 @PathVariable Long teamid,
@@ -145,6 +152,13 @@ public class StudentController {
 
     }
 
+    /**
+     * Retrieve the students that have not confirmed jet to join a team
+     * @param id the student id
+     * @param teamid the team id
+     * @param userDetails the user who make the requst
+     * @return the list of students that have not confirmed jet to join a team
+     */
     @GetMapping("/{id}/teams/{teamid}/pendent_members")
     public List<StudentDTO> getPendentMembers(@PathVariable String id,
                                                 @PathVariable Long teamid,
@@ -181,6 +195,13 @@ public class StudentController {
 
     }
 
+    /**
+     * Create a virtual machine
+     * @param id the student id
+     * @param teamid the team id
+     * @param userDetails the user who make the request
+     * @param virtualMachineDTO the virtual machine to create
+     */
     @PostMapping("/{id}/teams/{teamid}/virtual_machines")
     @ResponseStatus(HttpStatus.CREATED)
     public void createVirtualMachine(@PathVariable String id,
@@ -211,6 +232,14 @@ public class StudentController {
 
     }
 
+    /**
+     * Modify a virtual machine
+     * @param id the student id
+     * @param teamid the team id
+     * @param vmid the virtual machine id
+     * @param userDetails the user who make the request
+     * @param virtualMachineDTO the virtual machine modified
+     */
     @PutMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/modify")
     @ResponseStatus(HttpStatus.OK)
     public void modifyVirtualMachine(@PathVariable String id,
@@ -241,6 +270,12 @@ public class StudentController {
 
     }
 
+    /**
+     * Start a virtual machine
+     * @param id the student id
+     * @param vmid the virtual machine id
+     * @param userDetails the user who make the request
+     */
     @PutMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/start")
     @ResponseStatus(HttpStatus.OK)
     public void startVirtualMachine(@PathVariable String id,
@@ -269,6 +304,12 @@ public class StudentController {
 
     }
 
+    /**
+     * Stop a virtual machine
+     * @param id the student id
+     * @param vmid the virtual machine id
+     * @param userDetails the user who make the request
+     */
     @PutMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/stop")
     @ResponseStatus(HttpStatus.OK)
     public void stopVirtualMachine(@PathVariable String id,
@@ -297,6 +338,12 @@ public class StudentController {
 
     }
 
+    /**
+     * Delete a virtual machine
+     * @param id the student id
+     * @param vmid the virtual machine id
+     * @param userDetails the user who make the request
+     */
     @DeleteMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/delete")
     @ResponseStatus(HttpStatus.OK)
     public void deleteVirtualMachine(@PathVariable String id,
@@ -325,6 +372,13 @@ public class StudentController {
 
     }
 
+    /**
+     * Add owners to a virtual machine
+     * @param id the student id
+     * @param vmid the virtual machine id
+     * @param userDetails the user who make the request
+     * @param newOwners the list of owners to add
+     */
     @PutMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/add_owners")
     @ResponseStatus(HttpStatus.OK)
     public void addOwnersVirtualMachine(@PathVariable String id,
@@ -354,6 +408,13 @@ public class StudentController {
 
     }
 
+    /**
+     * Upload a delivery
+     * @param id the student id
+     * @param homeworkid the homework id
+     * @param userDetails the user who make the request
+     * @param multipartFile the delivery to upload
+     */
     @PostMapping("/{id}/{coursename}/{assignmentid}/{homeworkid}/deliveries")
     @ResponseStatus(HttpStatus.CREATED)
     public void uploadDelivery(@PathVariable String id,
@@ -379,6 +440,13 @@ public class StudentController {
         }
     }
 
+    /**
+     * Retrieve the image of a delivery
+     * @param id the student id
+     * @param deliveryid the delivery id
+     * @param userDetails the user who make the request
+     * @return the image of the delivery
+     */
     @GetMapping("/{id}/{coursename}/{assignmentid}/{homeworkid}/deliveries/{deliveryid}")
     @ResponseStatus(HttpStatus.OK)
     public byte[] getDeliveryImage(@PathVariable String id,
@@ -403,6 +471,13 @@ public class StudentController {
         }
     }
 
+    /**
+     * Retrieve the image of the assignment
+     * @param id the student id
+     * @param assignmentid the assignment id
+     * @param userDetails the user who make the request
+     * @return the image of the assignment
+     */
     @GetMapping("/{id}/{coursename}/{assignmentid}")
     @ResponseStatus(HttpStatus.OK)
     public byte[] getAssignmentImage(@PathVariable String id,
