@@ -12,6 +12,7 @@ import it.polito.ai.project.server.repositories.UserRepository;
 import it.polito.ai.project.server.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.transaction.TransactionSystemException;
@@ -315,7 +316,8 @@ public class CourseController {
      * @param userDetails the user who make the request
      * @return the imagine of a virtual machine
      */
-    @GetMapping("/{name}/teams/{teamid}/virtual_machines/{vmid}/image")
+    @GetMapping(value="/{name}/teams/{teamid}/virtual_machines/{vmid}/image",
+            produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] getVirtualMachineImage(@PathVariable Long teamid,
                                          @PathVariable Long vmid,
                                          @AuthenticationPrincipal UserDetails userDetails){
@@ -752,7 +754,8 @@ public class CourseController {
      * @param userDetails the user who make the request
      * @return the image of the assignment
      */
-    @GetMapping("/{name}/assignments/{assignmentid}/image")
+    @GetMapping(value = "/{name}/assignments/{assignmentid}/image",
+            produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] getAssignmentImage(@PathVariable String name,
                                      @PathVariable Long assignmentid,
                                      @AuthenticationPrincipal UserDetails userDetails){

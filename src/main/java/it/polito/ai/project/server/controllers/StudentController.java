@@ -4,6 +4,7 @@ import it.polito.ai.project.server.dtos.*;
 import it.polito.ai.project.server.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -443,7 +444,8 @@ public class StudentController {
      * @param userDetails the user who make the request
      * @return the image of the delivery
      */
-    @GetMapping("/{id}/{coursename}/{assignmentid}/{homeworkid}/deliveries/{deliveryid}")
+    @GetMapping(value = "/{id}/{coursename}/{assignmentid}/{homeworkid}/deliveries/{deliveryid}",
+            produces = MediaType.IMAGE_PNG_VALUE)
     @ResponseStatus(HttpStatus.OK)
     public byte[] getDeliveryImage(@PathVariable String id,
                                    @PathVariable Long deliveryid,
@@ -474,7 +476,8 @@ public class StudentController {
      * @param userDetails the user who make the request
      * @return the image of the assignment
      */
-    @GetMapping("/{id}/{coursename}/{assignmentid}")
+    @GetMapping(value = "/{id}/{coursename}/{assignmentid}",
+            produces = MediaType.IMAGE_PNG_VALUE)
     @ResponseStatus(HttpStatus.OK)
     public byte[] getAssignmentImage(@PathVariable String id,
                                      @PathVariable Long assignmentid,
