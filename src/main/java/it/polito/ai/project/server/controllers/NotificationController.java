@@ -47,18 +47,18 @@ public class NotificationController {
         return "error";
     }
 
-    @PostMapping("/propose/{courseName}/{team}")
+    @PostMapping("/propose/{courseName}/{team}/{proposerid}")
     public void notify(
                         @PathVariable String courseName,
                         @PathVariable String team,
-                        @RequestBody String proposer,
+                        @PathVariable String proposerid,
                         @RequestBody List<String> students
                     )
     {
         TeamDTO teamDTO;
 
         try {
-            teamDTO = teamService.proposeTeam(courseName, team, proposer, students);
+            teamDTO = teamService.proposeTeam(courseName, team, proposerid, students);
         }
         catch (TeamServiceException e){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());

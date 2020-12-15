@@ -161,8 +161,8 @@ public class StudentController {
      */
     @GetMapping("/{id}/teams/{teamid}/pendent_members")
     public List<StudentDTO> getPendentMembers(@PathVariable String id,
-                                                @PathVariable Long teamid,
-                                                @AuthenticationPrincipal UserDetails userDetails){
+                                              @PathVariable Long teamid,
+                                              @AuthenticationPrincipal UserDetails userDetails){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
         List<String> members;
 
@@ -235,16 +235,12 @@ public class StudentController {
     /**
      * Modify a virtual machine
      * @param id the student id
-     * @param teamid the team id
-     * @param vmid the virtual machine id
      * @param userDetails the user who make the request
      * @param virtualMachineDTO the virtual machine modified
      */
     @PutMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/modify")
     @ResponseStatus(HttpStatus.OK)
     public void modifyVirtualMachine(@PathVariable String id,
-                                     @PathVariable Long teamid,
-                                     @PathVariable Long vmid,
                                      @AuthenticationPrincipal UserDetails userDetails,
                                      @Valid @RequestBody VirtualMachineDTO virtualMachineDTO){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
@@ -279,8 +275,8 @@ public class StudentController {
     @PutMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/start")
     @ResponseStatus(HttpStatus.OK)
     public void startVirtualMachine(@PathVariable String id,
-                                     @PathVariable Long vmid,
-                                     @AuthenticationPrincipal UserDetails userDetails){
+                                    @PathVariable Long vmid,
+                                    @AuthenticationPrincipal UserDetails userDetails){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
 
         if(!student.isPresent()){
@@ -313,8 +309,8 @@ public class StudentController {
     @PutMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/stop")
     @ResponseStatus(HttpStatus.OK)
     public void stopVirtualMachine(@PathVariable String id,
-                                    @PathVariable Long vmid,
-                                    @AuthenticationPrincipal UserDetails userDetails){
+                                   @PathVariable Long vmid,
+                                   @AuthenticationPrincipal UserDetails userDetails){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
 
         if(!student.isPresent()){
@@ -347,8 +343,8 @@ public class StudentController {
     @DeleteMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/delete")
     @ResponseStatus(HttpStatus.OK)
     public void deleteVirtualMachine(@PathVariable String id,
-                                    @PathVariable Long vmid,
-                                    @AuthenticationPrincipal UserDetails userDetails){
+                                     @PathVariable Long vmid,
+                                     @AuthenticationPrincipal UserDetails userDetails){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
 
         if(!student.isPresent()){
@@ -382,9 +378,9 @@ public class StudentController {
     @PutMapping("/{id}/teams/{teamid}/virtual_machines/{vmid}/add_owners")
     @ResponseStatus(HttpStatus.OK)
     public void addOwnersVirtualMachine(@PathVariable String id,
-                                    @PathVariable Long vmid,
-                                    @AuthenticationPrincipal UserDetails userDetails,
-                                    @RequestBody List<String> newOwners){
+                                        @PathVariable Long vmid,
+                                        @AuthenticationPrincipal UserDetails userDetails,
+                                        @RequestBody List<String> newOwners){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
 
         if(!student.isPresent()){
@@ -450,8 +446,8 @@ public class StudentController {
     @GetMapping("/{id}/{coursename}/{assignmentid}/{homeworkid}/deliveries/{deliveryid}")
     @ResponseStatus(HttpStatus.OK)
     public byte[] getDeliveryImage(@PathVariable String id,
-                                                  @PathVariable Long deliveryid,
-                                                  @AuthenticationPrincipal UserDetails userDetails){
+                                   @PathVariable Long deliveryid,
+                                   @AuthenticationPrincipal UserDetails userDetails){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
 
         if(!student.isPresent()){
@@ -481,8 +477,8 @@ public class StudentController {
     @GetMapping("/{id}/{coursename}/{assignmentid}")
     @ResponseStatus(HttpStatus.OK)
     public byte[] getAssignmentImage(@PathVariable String id,
-                                   @PathVariable Long assignmentid,
-                                   @AuthenticationPrincipal UserDetails userDetails){
+                                     @PathVariable Long assignmentid,
+                                     @AuthenticationPrincipal UserDetails userDetails){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
 
         if(!student.isPresent()){

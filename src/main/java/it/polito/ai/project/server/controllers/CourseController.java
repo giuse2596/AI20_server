@@ -129,8 +129,17 @@ public class CourseController {
 //        vmModelDTO.setTotalInstances(courseModelDTO.getTotalInstances());
 
         try {
-            if (!teacherService.addCourse(courseModelDTO.getCourseDTO(), userDetails.getUsername(), courseModelDTO.getVmModelDTO())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, courseModelDTO.getCourseDTO().getName());
+            if (
+                    !teacherService.addCourse(
+                            courseModelDTO.getCourseDTO(),
+                            userDetails.getUsername(),
+                            courseModelDTO.getVmModelDTO()
+                    )
+            ) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        courseModelDTO.getCourseDTO().getName()
+                );
             }
         }
         catch (TransactionSystemException e){
@@ -166,7 +175,8 @@ public class CourseController {
      */
     @PostMapping("/{name}/enrollMany")
     @ResponseStatus(HttpStatus.CREATED)
-    public List<Boolean> enrollStudents(@RequestParam("file") MultipartFile file, @PathVariable String name){
+    public List<Boolean> enrollStudents(@RequestParam("file") MultipartFile file,
+                                        @PathVariable String name){
         Reader reader;
 
         if(!file.getContentType().equals("text/csv")){
@@ -454,8 +464,8 @@ public class CourseController {
      */
     @GetMapping("/{name}/assignments/{assignmentid}/{studentid}/last")
     public DeliveryDTO getAssignmentDelivery(@PathVariable Long assignmentid,
-                                                     @PathVariable String studentid,
-                                                     @AuthenticationPrincipal UserDetails userDetails
+                                             @PathVariable String studentid,
+                                             @AuthenticationPrincipal UserDetails userDetails
     ){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
 
@@ -511,7 +521,8 @@ public class CourseController {
      * @param userDetails the user who make the request
      */
     @PutMapping("/{name}/modify")
-    public void modifyCourse(@PathVariable String name, @RequestBody CourseDTO courseDTO,
+    public void modifyCourse(@PathVariable String name,
+                             @RequestBody CourseDTO courseDTO,
                              @AuthenticationPrincipal UserDetails userDetails){
 
         try{
@@ -551,7 +562,8 @@ public class CourseController {
      * @param userDetails the user who make the request
      */
     @DeleteMapping("/{name}/remove/{studentid}")
-    public void removeStudentFromCourse(@PathVariable String name, @PathVariable String studentid,
+    public void removeStudentFromCourse(@PathVariable String name,
+                                        @PathVariable String studentid,
                                         @AuthenticationPrincipal UserDetails userDetails){
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
@@ -608,7 +620,8 @@ public class CourseController {
      * @param userDetails the user who make the request
      */
     @PutMapping("/{name}/teams/{teamid}")
-    public void changeVMValues(@PathVariable String name, @RequestBody TeamDTO team,
+    public void changeVMValues(@PathVariable String name,
+                               @RequestBody TeamDTO team,
                                @AuthenticationPrincipal UserDetails userDetails){
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){

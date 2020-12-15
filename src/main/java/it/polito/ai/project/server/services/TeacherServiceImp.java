@@ -72,6 +72,11 @@ public class TeacherServiceImp implements TeacherService {
     @Override
     public boolean teacherInCourse(String teahcerId, String courseName) {
         Optional<Teacher> teacherOptional = this.teacherRepository.findById(teahcerId);
+        Optional<Course> courseOptional = this.courseRepository.findById(courseName);
+
+        if(!courseOptional.isPresent()){
+            throw new TeacherServiceException("Course does not exists");
+        }
 
         if(!teacherOptional.isPresent()){
             throw new TeacherServiceException("Teacher not found");
