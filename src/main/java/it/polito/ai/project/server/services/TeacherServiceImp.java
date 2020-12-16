@@ -754,21 +754,44 @@ public class TeacherServiceImp implements TeacherService {
     public void revisionDelivery(Long homeworkId, MultipartFile multipartFile) {
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
         Delivery delivery = new Delivery();
+        File newFile;
+        InputStream inputStream;
+        OutputStream outputStream;
 
         // check if the homework exists
         if (!homeworkOptional.isPresent()) {
-            throw new StudentServiceException("The homework doesn't exist");
+            throw new TeacherServiceException("The homework doesn't exist");
         }
 
-        // set the appropriate path to pathimage
-        delivery.setPathImage("path of the file");
         delivery.setStatus(Delivery.Status.REVIEWED);
         delivery.setTimestamp(new Timestamp(System.currentTimeMillis()));
         delivery.setHomework(homeworkOptional.get());
 
         this.deliveryRepository.save(delivery);
 
+        delivery.setPathImage("src/main/resources/images/deliveries/" +
+                delivery.getId().toString() + ".png");
+
         // save the file in the application
+        newFile = new File(delivery.getPathImage());
+
+        try {
+            inputStream = multipartFile.getInputStream();
+
+            if (!newFile.exists()) {
+                newFile.getParentFile().mkdir();
+            }
+            outputStream = new FileOutputStream(newFile);
+            int read = 0;
+            byte[] bytes = new byte[1024];
+
+            while ((read = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, read);
+            }
+        } catch (IOException e)
+        {
+            throw new TeacherServiceException("Error saving the file");
+        }
 
     }
 
@@ -794,7 +817,7 @@ public class TeacherServiceImp implements TeacherService {
             ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
         }
         catch (IOException e){
-            throw new StudentServiceException();
+            throw new TeacherServiceException("Error reading the file");
         }
 
         return byteArrayOutputStream.toByteArray();

@@ -129,22 +129,17 @@ public class CourseController {
 //        vmModelDTO.setActiveInstances(courseModelDTO.getActiveInstances());
 //        vmModelDTO.setTotalInstances(courseModelDTO.getTotalInstances());
 
-        try {
-            if (
-                    !teacherService.addCourse(
-                            courseModelDTO.getCourseDTO(),
-                            userDetails.getUsername(),
-                            courseModelDTO.getVmModelDTO()
-                    )
-            ) {
-                throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        courseModelDTO.getCourseDTO().getName()
-                );
-            }
-        }
-        catch (TransactionSystemException e){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        if (
+                !teacherService.addCourse(
+                        courseModelDTO.getCourseDTO(),
+                        userDetails.getUsername(),
+                        courseModelDTO.getVmModelDTO()
+                )
+        ) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    courseModelDTO.getCourseDTO().getName()
+            );
         }
 
         return modelHelper.enrich(generalService.getCourse(courseModelDTO.getCourseDTO().getName()).get());
@@ -163,8 +158,8 @@ public class CourseController {
                  throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, studentDTO.getId()+""+name);
              }
         }
-        catch (CourseNotFoundException | StudentNotFoundExeption | TransactionSystemException e){
-            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, e.getMessage());
+        catch (CourseNotFoundException | StudentNotFoundExeption e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
     }
 
@@ -292,7 +287,9 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
-        if(!userDetails.getAuthorities().contains("ROLE_TEACHER") &
+        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
+                .collect(Collectors.toList())
+                .contains("ROLE_TEACHER") &
                 !members.contains(userDetails.getUsername())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
@@ -338,7 +335,9 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
-        if(!userDetails.getAuthorities().contains("ROLE_TEACHER") &
+        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
+                .collect(Collectors.toList())
+                .contains("ROLE_TEACHER") &
                 !members.contains(userDetails.getUsername())){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
@@ -440,7 +439,9 @@ public class CourseController {
     ){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
 
-        if(!userDetails.getAuthorities().contains("ROLE_TEACHER") &
+        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
+                .collect(Collectors.toList())
+                .contains("ROLE_TEACHER") &
                 !userDetails.getUsername().equals(studentid)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
@@ -471,7 +472,9 @@ public class CourseController {
     ){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
 
-        if(!userDetails.getAuthorities().contains("ROLE_TEACHER") &
+        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
+                .collect(Collectors.toList())
+                .contains("ROLE_TEACHER") &
                 !userDetails.getUsername().equals(studentid)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }

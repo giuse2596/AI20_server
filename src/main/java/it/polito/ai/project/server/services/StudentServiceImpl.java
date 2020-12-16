@@ -140,7 +140,7 @@ public class StudentServiceImpl implements StudentService{
         virtualMachine.setCpu(virtualMachineDTO.getCpu());
         virtualMachine.setDiskSpace(virtualMachineDTO.getDiskSpace());
         virtualMachine.setRam(virtualMachineDTO.getRam());
-        virtualMachine.setPathImage("da/cambiare");
+        virtualMachine.setPathImage("src/main/resources/images/virtual_machines/virtual_machine.png");
         virtualMachine.setActive(false);
         virtualMachine.setTeam(teamOptional.get());
         virtualMachine.addOwner(studentOptional.get());
@@ -427,6 +427,9 @@ public class StudentServiceImpl implements StudentService{
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         Date deliveryDate = Date.valueOf(timestamp.toLocalDateTime().toLocalDate());
         Delivery delivery = new Delivery();
+        File newFile;
+        InputStream inputStream;
+        OutputStream outputStream;
 
         // check if the homework exists
         if (!homeworkOptional.isPresent()) {
@@ -443,29 +446,32 @@ public class StudentServiceImpl implements StudentService{
             throw new StudentServiceException("Delivery date expired");
         }
 
-        delivery.setPathImage("da/cambiare");
         delivery.setStatus(Delivery.Status.DELIVERED);
         delivery.setTimestamp(timestamp);
         delivery.setHomework(homeworkOptional.get());
 
         this.deliveryRepository.save(delivery);
 
-        // path passed as:
-        // String path = request.getSession().getServletContext().getRealPath("/tmp/...");
-        File dirPath = new File(delivery.getPathImage() + delivery.getId().toString());
+        delivery.setPathImage("src/main/resources/images/deliveries/" +
+                delivery.getId().toString() + ".png");
 
-        //check destination exists, if not create it
-//        if(!dirPath.exists())
-//        {
-//            dirPath.mkdir();
-//        }
+        newFile = new File(delivery.getPathImage());
 
         try {
-            multipartFile.transferTo(dirPath);
-        }
-        catch (IllegalStateException | IOException e)
+            inputStream = multipartFile.getInputStream();
+
+            if (!newFile.exists()) {
+                newFile.getParentFile().mkdir();
+            }
+            outputStream = new FileOutputStream(newFile);
+            int read = 0;
+            byte[] bytes = new byte[1024];
+
+            while ((read = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, read);
+            }
+        } catch (IOException e)
         {
-            //e.printStackTrace();
             throw new StudentServiceException("Error saving the file");
         }
 

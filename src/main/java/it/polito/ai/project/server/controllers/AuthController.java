@@ -2,8 +2,10 @@ package it.polito.ai.project.server.controllers;
 
 import it.polito.ai.project.server.dtos.UserDTO;
 import it.polito.ai.project.server.entities.User;
-import it.polito.ai.project.server.repositories.UserRepository;
 import it.polito.ai.project.server.security.jwt.JwtTokenProvider;
+import it.polito.ai.project.server.services.UserNotActiveException;
+import it.polito.ai.project.server.services.UserService;
+import it.polito.ai.project.server.services.UserServiceException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,7 +14,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,7 +22,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.springframework.http.ResponseEntity.ok;
 
@@ -36,55 +36,39 @@ public class AuthController {
     JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    UserRepository users;
+    UserService userService;
 
     @Autowired
     ModelMapper modelMapper;
 
     @PostMapping("/login")
     public ResponseEntity login(@RequestBody UserDTO userDTO) {
-        Optional<User> userOptional;
-        String username;
+        User user;
         String token;
 
-        if(userDTO == null){
-            throw new BadCredentialsException("Invalid username/password supplied");
+        try{
+            user = userService.getActiveUser(userDTO.getUsername());
         }
-
-        if( (userDTO.getUsername() == null) || (userDTO.getPassword() == null)){
-            throw new BadCredentialsException("Invalid username/password supplied");
+        catch (UserServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-
-        if (userDTO.getUsername().isEmpty() || userDTO.getPassword().isEmpty()) {
-            throw new BadCredentialsException("Invalid username/password supplied");
-        }
-
-        userOptional = this.users.findByUsername(userDTO.getUsername());
-
-        if (!userOptional.isPresent()) {
-            throw new BadCredentialsException("Invalid username/password supplied");
-        }
-
-        if (!userOptional.get().isActive()) {
-            throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, "User not active");
+        catch (UserNotActiveException e){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
         try {
-            username = userDTO.getUsername();
 
             authenticationManager
                     .authenticate(new UsernamePasswordAuthenticationToken(
-                                                                    username,
-                                                                    userDTO.getPassword()
+                                    userDTO.getUsername(),
+                                    userDTO.getPassword()
                                                                         )
                                 );
 
-            token = jwtTokenProvider.createToken(username, this.users.findById(userOptional.get().getId())
-                    .orElseThrow(() -> new UsernameNotFoundException("Username " + username + "not found"))
-                    .getRoles());
+            token = jwtTokenProvider.createToken(userDTO.getUsername(), user.getRoles());
 
             Map<Object, Object> model = new HashMap<>();
-            model.put("user", modelMapper.map(userOptional.get(), UserDTO.class));
+            model.put("user", modelMapper.map(user, UserDTO.class));
             model.put("token", token);
             return ok(model);
         }

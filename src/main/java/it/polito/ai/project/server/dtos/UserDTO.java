@@ -9,7 +9,7 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 @Data
-public class UserDTO extends RepresentationModel<TeacherDTO> {
+public class UserDTO extends RepresentationModel<UserDTO> {
 
     private Long id;
 
@@ -27,6 +27,8 @@ public class UserDTO extends RepresentationModel<TeacherDTO> {
 
     @NotBlank
     private String firstname;
+
+    private String pathImage;
 
     private boolean active;
 

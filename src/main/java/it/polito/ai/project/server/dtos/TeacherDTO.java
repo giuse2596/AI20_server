@@ -12,8 +12,6 @@ public class TeacherDTO extends RepresentationModel<TeacherDTO> {
 
     private String firstname;
 
-    private String pathImage;
-
     private String email;
 
     private Long userId;

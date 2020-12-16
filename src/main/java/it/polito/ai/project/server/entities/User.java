@@ -46,6 +46,9 @@ public class User implements UserDetails {
     @NotBlank
     private String firstname;
 
+    @NotBlank
+    private String pathImage;
+
     @NotNull
     private boolean active;
 

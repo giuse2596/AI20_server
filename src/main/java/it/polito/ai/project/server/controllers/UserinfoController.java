@@ -11,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
@@ -91,4 +92,50 @@ public class UserinfoController {
         }
 
     }
+
+    @PutMapping("/{username}/modify_user_image")
+    public void modifyUserImage(@RequestBody MultipartFile multipartFile,
+                                @PathVariable String username,
+                                @AuthenticationPrincipal UserDetails userDetails){
+        Optional<User> userOptional = this.userRepository.findByUsername(userDetails.getUsername());
+
+        if(!userOptional.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+
+        // check if the user is the same of {id}
+        if(!userOptional.get().getUsername().equals(username)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        try{
+            this.userService.modifyUserImage(username, multipartFile);
+        } catch (UserServiceException e){
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+
+    }
+
+    @GetMapping("/{username}/user_image")
+    public byte[] getUserImage(@PathVariable String username,
+                               @AuthenticationPrincipal UserDetails userDetails){
+        Optional<User> userOptional = this.userRepository.findByUsername(userDetails.getUsername());
+
+        if(!userOptional.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+
+        // check if the user is the same of {id}
+        if(!userOptional.get().getUsername().equals(username)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        try{
+            return this.userService.getUserImage(username);
+        }catch (UserServiceException e){
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+
+    }
+
 }

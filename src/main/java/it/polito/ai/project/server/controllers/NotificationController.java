@@ -60,8 +60,11 @@ public class NotificationController {
         try {
             teamDTO = teamService.proposeTeam(courseName, team, proposerid, students);
         }
+        catch (StudentNotFoundExeption | CourseNotFoundException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
         catch (TeamServiceException e){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
 
        notificationService.notifyTeam(teamDTO, students);

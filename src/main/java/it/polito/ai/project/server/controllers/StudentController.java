@@ -122,7 +122,6 @@ public class StudentController {
                                                 @PathVariable Long teamid,
                                                 @AuthenticationPrincipal UserDetails userDetails){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
-        List<String> members;
 
         if(!student.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
@@ -135,10 +134,14 @@ public class StudentController {
 
         // check if the student is a member of the team
         try{
-            members = this.teamService.getMembers(teamid)
+            if(!this.teamService.getMembers(teamid)
                     .stream()
                     .map(x -> x.getId())
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList())
+                    .contains(student.get().getId())
+            ){
+                throw new ResponseStatusException(HttpStatus.CONFLICT);
+            }
         }
         catch (TeamNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -165,7 +168,6 @@ public class StudentController {
                                               @PathVariable Long teamid,
                                               @AuthenticationPrincipal UserDetails userDetails){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
-        List<String> members;
 
         if(!student.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
@@ -178,10 +180,14 @@ public class StudentController {
 
         // check if the student is a member of the team
         try{
-            members = this.teamService.getMembers(teamid)
+            if(!this.teamService.getMembers(teamid)
                     .stream()
                     .map(x -> x.getId())
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList())
+                    .contains(student.get().getId())
+            ){
+                throw new ResponseStatusException(HttpStatus.CONFLICT);
+            }
         }
         catch (TeamNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);

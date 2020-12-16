@@ -24,9 +24,6 @@ public class Student {
     private String firstname;
 
     @NotBlank
-    private String pathImage;
-
-    @NotBlank
     private String email;
 
     @NotNull
