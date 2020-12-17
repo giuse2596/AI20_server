@@ -13,7 +13,7 @@ public class StudentDTO extends RepresentationModel<StudentDTO> {
     private String name;
 
     @CsvBindByName
-    private String firstname;
+    private String firstName;
 
     @CsvBindByName
     private String email;

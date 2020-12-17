@@ -10,7 +10,7 @@ public class TeacherDTO extends RepresentationModel<TeacherDTO> {
 
     private String name;
 
-    private String firstname;
+    private String firstName;
 
     private String email;
 

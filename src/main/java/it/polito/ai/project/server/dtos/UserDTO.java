@@ -26,7 +26,7 @@ public class UserDTO extends RepresentationModel<UserDTO> {
     private String name;
 
     @NotBlank
-    private String firstname;
+    private String firstName;
 
     private String pathImage;
 

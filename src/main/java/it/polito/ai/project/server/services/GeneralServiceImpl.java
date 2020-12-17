@@ -186,18 +186,18 @@ public class GeneralServiceImpl implements GeneralService{
         }
 
         userOptional.get().setName(userDTO.getName());
-        userOptional.get().setFirstname(userDTO.getFirstname());
+        userOptional.get().setFirstName(userDTO.getFirstName());
         userOptional.get().setPassword(userDTO.getPassword());
 
         if (splittedEmail[1].equals("studenti.polito.it")) {
             studentOptional = this.studentRepository.findById(userDTO.getUsername());
             studentOptional.get().setName(userDTO.getName());
-            studentOptional.get().setFirstname(userDTO.getFirstname());
+            studentOptional.get().setFirstName(userDTO.getFirstName());
         }
         else {
             teacherOptional = this.teacherRepository.findById(userDTO.getUsername());
             teacherOptional.get().setName(userDTO.getName());
-            teacherOptional.get().setFirstname(userDTO.getFirstname());
+            teacherOptional.get().setFirstName(userDTO.getFirstName());
         }
 
         this.userRepository.save(userOptional.get());

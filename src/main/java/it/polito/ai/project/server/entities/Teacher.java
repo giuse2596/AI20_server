@@ -21,7 +21,7 @@ public class Teacher {
     private String name;
 
     @NotBlank
-    private String firstname;
+    private String firstName;
 
     @NotBlank
     private String email;

@@ -52,7 +52,7 @@ public class UserServiceImpl implements UserService{
 
         user.setUsername(userDTO.getUsername());
         user.setName(userDTO.getName());
-        user.setFirstname(userDTO.getFirstname());
+        user.setFirstName(userDTO.getFirstName());
         user.setEmail(userDTO.getEmail());
         user.setPassword(bCryptPasswordEncoder.encode(userDTO.getPassword()));
         user.setRoles(Arrays.asList("ROLE_STUDENT"));
@@ -64,7 +64,7 @@ public class UserServiceImpl implements UserService{
         student.setId(userDTO.getUsername());
         student.setEmail(userDTO.getEmail());
         student.setName(userDTO.getName());
-        student.setFirstname(userDTO.getFirstname());
+        student.setFirstName(userDTO.getFirstName());
         student.setUserId(user.getId());
 
         this.studentRepository.save(student);
@@ -83,7 +83,7 @@ public class UserServiceImpl implements UserService{
 
         user.setUsername(userDTO.getUsername());
         user.setName(userDTO.getName());
-        user.setFirstname(userDTO.getFirstname());
+        user.setFirstName(userDTO.getFirstName());
         user.setEmail(userDTO.getEmail());
         user.setPassword(bCryptPasswordEncoder.encode(userDTO.getPassword()));
         user.setRoles(Arrays.asList("ROLE_TEACHER"));
@@ -95,7 +95,7 @@ public class UserServiceImpl implements UserService{
         teacher.setId(userDTO.getUsername());
         teacher.setEmail(userDTO.getEmail());
         teacher.setName(userDTO.getName());
-        teacher.setFirstname(userDTO.getFirstname());
+        teacher.setFirstName(userDTO.getFirstName());
         teacher.setUserId(user.getId());
 
         this.teacherRepository.save(teacher);
