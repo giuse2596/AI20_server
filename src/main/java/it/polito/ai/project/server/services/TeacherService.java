@@ -10,20 +10,24 @@ public interface TeacherService {
     boolean teacherInCourse(String teahcerId, String couseName);
     boolean addCourse(CourseDTO course, String teacherId, VMModelDTO vmModelDTO);
     boolean removeCourse(String coursename);
-    void modifyCourse(String courseId, CourseDTO course);
+    void modifyCourse(String courseId, int min, int max);
     List<StudentDTO> getEnrolledStudents(String courseName);
     boolean addStudentToCourse(String studentId, String courseName);
     boolean addTeacherToCourse(String teacherId, String courseName);
-    boolean removeStudentToCourse(String studentId, String courseName);
+    boolean removeStudentToCourse(String studentId, String courseName, boolean deleteCourse);
     void enableCourse(String courseName);
     void disableCourse(String courseName);
     List<TeamDTO> getTeamForCourse(String courseName);
     List<Boolean> enrollAll(List<String> studentIds, String courseName);
     List<Boolean> enrollCSV(Reader r, String courseName);
     void changeVMvalues(TeamDTO newTeam, String courseName);
-    AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName, MultipartFile multipartFile);
+    AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName);
+    void addImageToAssignment(Long assignmentId, MultipartFile multipartFile);
     void removeAssignment(Long assignmentId, String courseName);
-    void assignMarkToHomework(HomeworkDTO homework);
+    void assignMarkToHomework(Long homeworkId, int mark);
     void revisionDelivery(Long homeworkId, MultipartFile multipartFile);
     byte[] getAssignmentImage(Long assignmentId);
+    VMModelDTO getVMModel(String courseName);
+    void setEditableHomework(Long homeworkId, boolean editable);
+    List<CourseDTO> getTeacherCourses(String teacherId);
 }

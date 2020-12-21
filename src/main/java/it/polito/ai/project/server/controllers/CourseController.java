@@ -15,7 +15,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -25,8 +24,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.sql.Date;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -68,6 +65,28 @@ public class CourseController {
                 .stream()
                 .map(x -> modelHelper.enrich(x))
                 .collect(Collectors.toList());
+    }
+
+    @GetMapping("/{teacherid}")
+    public List<CourseDTO> getTeacherCourses(@PathVariable String teacherid,
+                                             @AuthenticationPrincipal UserDetails userDetails){
+        Optional<Teacher> teacherOptional = teacherRepository.findById(userDetails.getUsername());
+
+        if(!teacherOptional.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
+        }
+
+        if(!teacherid.equals(userDetails.getUsername())){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        try{
+            return this.teacherService.getTeacherCourses(teacherid);
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+
     }
 
     /**
@@ -115,19 +134,6 @@ public class CourseController {
     @PostMapping({"","/"})
     public CourseDTO addCourse(@Valid @RequestBody CourseModelDTO courseModelDTO,
                                @AuthenticationPrincipal UserDetails userDetails){
-//        CourseDTO courseDTO = new CourseDTO();
-//        VMModelDTO vmModelDTO = new VMModelDTO();
-//
-//        courseDTO.setName(courseModelDTO.getName());
-//        courseDTO.setAcronym(courseModelDTO.getAcronym());
-//        courseDTO.setMin(courseModelDTO.getMin());
-//        courseDTO.setMax(courseModelDTO.getMax());
-//
-//        vmModelDTO.setCpuMax(courseModelDTO.getCpuMax());
-//        vmModelDTO.setRamMax(courseModelDTO.getRamMax());
-//        vmModelDTO.setDiskSpaceMax(courseModelDTO.getDiskSpaceMax());
-//        vmModelDTO.setActiveInstances(courseModelDTO.getActiveInstances());
-//        vmModelDTO.setTotalInstances(courseModelDTO.getTotalInstances());
 
         if (
                 !teacherService.addCourse(
@@ -439,15 +445,15 @@ public class CourseController {
     ){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
 
+        if(!user.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
+        }
+
         if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
                 .collect(Collectors.toList())
                 .contains("ROLE_TEACHER") &
                 !userDetails.getUsername().equals(studentid)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
-        if(!user.isPresent()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
         try {
@@ -472,15 +478,15 @@ public class CourseController {
     ){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
 
+        if(!user.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
+        }
+
         if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
                 .collect(Collectors.toList())
                 .contains("ROLE_TEACHER") &
                 !userDetails.getUsername().equals(studentid)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
-        if(!user.isPresent()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
         try {
@@ -522,12 +528,14 @@ public class CourseController {
     /**
      * Modify the course
      * @param name the name of the course
-     * @param courseDTO the course modified
+     * @param min the min of the team member
+     * @param max the max of the team member
      * @param userDetails the user who make the request
      */
     @PutMapping("/{name}/modify")
     public void modifyCourse(@PathVariable String name,
-                             @RequestBody CourseDTO courseDTO,
+                             @RequestParam int min,
+                             @RequestParam int max,
                              @AuthenticationPrincipal UserDetails userDetails){
 
         try{
@@ -540,10 +548,13 @@ public class CourseController {
         }
 
         try{
-            this.teacherService.modifyCourse(name, courseDTO);
+            this.teacherService.modifyCourse(name, min, max);
         }
         catch (CourseNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
     }
 
@@ -580,7 +591,7 @@ public class CourseController {
         }
 
         try{
-            this.teacherService.removeStudentToCourse(studentid, name);
+            this.teacherService.removeStudentToCourse(studentid, name, false);
         }
         catch (StudentNotFoundExeption | CourseNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
@@ -599,14 +610,16 @@ public class CourseController {
     public HomeworkDTO getStudentHomework(@PathVariable Long assignmentsid,
                                           @PathVariable String studentid,
                                           @AuthenticationPrincipal UserDetails userDetails){
-        Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
+        Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
 
-        if(!student.isPresent()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, studentid);
+        if(!user.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
-        // check if the student is the same of {id}
-        if(!student.get().getId().equals(studentid)){
+        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
+                .collect(Collectors.toList())
+                .contains("ROLE_TEACHER") &
+                !userDetails.getUsername().equals(studentid)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
@@ -652,20 +665,13 @@ public class CourseController {
      * Create an assignment
      * @param name the name of the course
      * @param assignmentDTO the assignment to create
-     * @param multipartFile the image of the assignment
      * @param userDetails the user who make the request
      * @return the created assignment DTO
      */
     @PostMapping("/{name}/assignments")
     public AssignmentDTO createAssignment(@PathVariable String name,
-                                          //@RequestBody @Valid AssignmentFileDTO assignmentFileDTO,
                                           @RequestBody AssignmentDTO assignmentDTO,
-                                          @RequestParam("file") MultipartFile multipartFile,
                                           @AuthenticationPrincipal UserDetails userDetails){
-        //AssignmentDTO assignmentDTO = new AssignmentDTO();
-
-        //assignmentDTO.setName("Prova1");
-        //assignmentDTO.setExpiryDate(new Date(new Timestamp(System.currentTimeMillis()).getTime()));
 
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
@@ -677,7 +683,7 @@ public class CourseController {
         }
 
         try{
-            return this.teacherService.createAssignment(assignmentDTO, name, multipartFile);
+            return this.teacherService.createAssignment(assignmentDTO, name);
         }
         catch (CourseNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -690,17 +696,15 @@ public class CourseController {
     /**
      * Set the mark of an homework
      * @param name the name of the course
-     * @param homeworkDTO the homework to evaluete
+     * @param homeworkid the homework id
+     * @param mark the mark of the homework
      * @param userDetails the user who make the request
      */
     @PutMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}")
     public void assignMarkToHomework(@PathVariable String name,
-                                     @RequestBody HomeworkDTO homeworkDTO,
+                                     @PathVariable Long homeworkid,
+                                     @RequestBody int mark,
                                      @AuthenticationPrincipal UserDetails userDetails){
-
-        if(homeworkDTO.getMark() == null){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
 
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
@@ -712,7 +716,31 @@ public class CourseController {
         }
 
         try{
-            this.teacherService.assignMarkToHomework(homeworkDTO);
+            this.teacherService.assignMarkToHomework(homeworkid, mark);
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+
+    }
+
+    @PutMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}/editable")
+    public void setEditableHomework(@PathVariable String name,
+                                     @PathVariable Long homeworkid,
+                                     @RequestBody boolean editable,
+                                     @AuthenticationPrincipal UserDetails userDetails){
+
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+
+        try{
+            this.teacherService.setEditableHomework(homeworkid, editable);
         }
         catch (TeacherServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
@@ -750,6 +778,29 @@ public class CourseController {
         }
     }
 
+    @PostMapping("/{name}/assignments/{assignmentid}/image")
+    public void addImageToAssignment(@PathVariable Long assignmentid,
+                                     @PathVariable String name,
+                                     @RequestBody MultipartFile multipartFile,
+                                     @AuthenticationPrincipal UserDetails userDetails){
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+
+        try{
+            this.teacherService.addImageToAssignment(assignmentid, multipartFile);
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
+
+    }
+
     /**
      * Retrieve the assignment image
      * @param name the name of the course
@@ -780,6 +831,27 @@ public class CourseController {
         catch (StudentServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
+    }
+
+    @GetMapping("/{name}/virtual_machine_model")
+    public VMModelDTO getVMModel(@PathVariable String name,
+                                 @AuthenticationPrincipal UserDetails userDetails){
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+
+        try{
+            return this.teacherService.getVMModel(name);
+        }
+        catch (CourseNotFoundException | TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+
     }
 
 }

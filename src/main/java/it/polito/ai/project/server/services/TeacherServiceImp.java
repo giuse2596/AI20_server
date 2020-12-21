@@ -7,11 +7,9 @@ import it.polito.ai.project.server.entities.*;
 import it.polito.ai.project.server.repositories.*;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import javax.imageio.ImageIO;
 import javax.transaction.Transactional;
@@ -159,7 +157,7 @@ public class TeacherServiceImp implements TeacherService {
 
         // removing the students from the course
         courseOptional.get().getStudents().forEach(x -> courseStudents.add(x));
-        courseStudents.forEach(x -> this.removeStudentToCourse(x.getId(), coursename));
+        courseStudents.forEach(x -> this.removeStudentToCourse(x.getId(), coursename, true));
 
         // removing the teachers from the course
         courseOptional.get().getTeachers().forEach(x -> courseTeachers.add(x));
@@ -189,12 +187,13 @@ public class TeacherServiceImp implements TeacherService {
 
     /**
      * modify the course attributes
-     * @param course   the courseDTO object to modify
+     * @param min the min value for student's team
+     * @param max the max value for student's team
      * @param courseId the courseId
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public void modifyCourse(String courseId, CourseDTO course) {
+    public void modifyCourse(String courseId, int min, int max) {
         Course courseToUpdate;
         Optional<Course> courseOptional = courseRepository.findById(courseId);
 
@@ -206,12 +205,29 @@ public class TeacherServiceImp implements TeacherService {
         // get the course
         courseToUpdate = courseOptional.get();
 
+        // check if there are teams in a course
+        if(courseToUpdate.getTeams().size() > 0){
+
+            // check if there are teams with a number of members
+            // smaller than the min value or grater than the max
+            if(
+                    courseToUpdate.getTeams()
+                    .stream()
+                    .map(x -> x.getMembers().size())
+                    .min(Integer::compare).get() < min
+                    |
+                    courseToUpdate.getTeams()
+                    .stream()
+                    .map(x -> x.getMembers().size())
+                    .max(Integer::compare).get() > max
+            ){
+                throw new TeacherServiceException("Min or max values cannot be changed");
+            }
+        }
+
         // update the course fields
-        courseToUpdate.setName(course.getName());
-        courseToUpdate.setAcronym(course.getAcronym());
-        courseToUpdate.setMin(course.getMin());
-        courseToUpdate.setMax(course.getMax());
-        courseToUpdate.setEnabled(course.isEnabled());
+        courseToUpdate.setMin(min);
+        courseToUpdate.setMax(max);
 
         this.courseRepository.save(courseToUpdate);
     }
@@ -354,7 +370,7 @@ public class TeacherServiceImp implements TeacherService {
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public boolean removeStudentToCourse(String studentId, String courseName) {
+    public boolean removeStudentToCourse(String studentId, String courseName, boolean deleteCourse) {
         Optional<Course> courseOptional = courseRepository.findById(courseName);
         Optional<Student> studentOptional = studentRepository.findById(studentId);
 
@@ -362,12 +378,14 @@ public class TeacherServiceImp implements TeacherService {
         if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
+
         // check if the student exist
         if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
-        // check if the course is enabled
-        if(!courseOptional.get().isEnabled()){
+
+        // check if the course is enabled and if the course is beeing deleted
+        if(!courseOptional.get().isEnabled() & !deleteCourse){
             return false;
         }
 
@@ -570,6 +588,49 @@ public class TeacherServiceImp implements TeacherService {
         // get the team to update
         teamToUpdate = teamOptional.get();
 
+        // check if the total cpu of the instances of
+        // team's virtual machines is greater than the max
+        if(teamToUpdate.getVirtualMachines()
+                .stream()
+                .map(x -> x.getCpu())
+                .mapToInt(x -> x)
+                .sum() > newTeam.getCpuMax()){
+            throw new TeacherServiceException("Cannot change cpu value");
+        }
+
+        // check if the total ram of the instances of
+        // team's virtual machines is greater than the max
+        if(teamToUpdate.getVirtualMachines()
+                .stream()
+                .map(x -> x.getRam())
+                .mapToInt(x -> x)
+                .sum() > newTeam.getCpuMax()){
+            throw new TeacherServiceException("Cannot change ram value");
+        }
+
+        // check if the total disk space of the instances of
+        // team's virtual machines is greater than the max
+        if(teamToUpdate.getVirtualMachines()
+                .stream()
+                .map(x -> x.getDiskSpace())
+                .mapToInt(x -> x)
+                .sum() > newTeam.getCpuMax()){
+            throw new TeacherServiceException("Cannot change disk space value");
+        }
+
+        // check if the total active team's virtual machines is greater than the max
+        if(teamToUpdate.getVirtualMachines()
+                .stream()
+                .filter(x -> x.isActive())
+                .count() > newTeam.getActiveVM()){
+            throw new TeacherServiceException("Cannot change max active virtual machine value");
+        }
+
+        // check if the total team's virtual machines is greater than the max
+        if(teamToUpdate.getVirtualMachines().size() > newTeam.getActiveVM()){
+            throw new TeacherServiceException("Cannot change max total virtual machine value");
+        }
+
         // apply the changes to the team
         teamToUpdate.setCpuMax(newTeam.getCpuMax());
         teamToUpdate.setRamMax(newTeam.getRamMax());
@@ -588,13 +649,9 @@ public class TeacherServiceImp implements TeacherService {
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public AssignmentDTO createAssignment(AssignmentDTO assignment,
-                                          String courseName, MultipartFile multipartFile) {
+    public AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName) {
         Assignment newAssignemt = new Assignment();
         Optional<Course> courseOptional = courseRepository.findById(courseName);
-        File newFile;
-        InputStream inputStream = null;
-        OutputStream outputStream = null;
 
         // check if the course exists
         if(!courseOptional.isPresent()){
@@ -620,33 +677,10 @@ public class TeacherServiceImp implements TeacherService {
         newAssignemt.setReleaseDate(new Date(new Timestamp(System.currentTimeMillis()).getTime()));
         newAssignemt.setExpiryDate(assignment.getExpiryDate());
         newAssignemt.setCourse(courseOptional.get());
+        newAssignemt.setPathImage("src/main/resources/images/deliveries/empty_image.png");
 
         // save the assignment
         this.assignmentRepository.save(newAssignemt);
-
-        // set path of the file
-        newAssignemt.setPathImage("src/main/resources/images/assignments/" +
-                newAssignemt.getId().toString() +
-                ".png");
-
-        newFile = new File(newAssignemt.getPathImage());
-
-        try {
-            inputStream = multipartFile.getInputStream();
-
-            if (!newFile.exists()) {
-                newFile.getParentFile().mkdir();
-            }
-            outputStream = new FileOutputStream(newFile);
-            int read = 0;
-            byte[] bytes = new byte[1024];
-
-            while ((read = inputStream.read(bytes)) != -1) {
-                outputStream.write(bytes, 0, read);
-            }
-        } catch (IOException e) {
-            throw  new TeacherServiceException();
-        }
 
         // create homework with a delivery with the NULL status for all students
         courseOptional.get().getStudents()
@@ -666,6 +700,43 @@ public class TeacherServiceImp implements TeacherService {
                 });
 
         return modelMapper.map(newAssignemt, AssignmentDTO.class);
+    }
+
+    @Override
+    public void addImageToAssignment(Long assignmentId, MultipartFile multipartFile) {
+        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
+        File newFile;
+        InputStream inputStream = null;
+        OutputStream outputStream = null;
+
+        if(!assignmentOptional.isPresent()){
+            throw new TeacherServiceException("The assignment does not exists");
+        }
+
+        // set path of the file
+        assignmentOptional.get().setPathImage("src/main/resources/images/assignments/" +
+                assignmentOptional.get().getId().toString() +
+                ".png");
+
+        newFile = new File(assignmentOptional.get().getPathImage());
+
+        try {
+            inputStream = multipartFile.getInputStream();
+
+            if (!newFile.exists()) {
+                newFile.getParentFile().mkdir();
+            }
+            outputStream = new FileOutputStream(newFile);
+            int read = 0;
+            byte[] bytes = new byte[1024];
+
+            while ((read = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, read);
+            }
+        } catch (IOException e) {
+            throw  new TeacherServiceException("Error reading the file");
+        }
+
     }
 
     /**
@@ -724,11 +795,12 @@ public class TeacherServiceImp implements TeacherService {
 
     /**
      * Assign a mark to an homework
-     * @param homework the homework to evaluate
+     * @param homeworkId the homework id
+     * @param mark the mark of the homework
      */
     @Override
-    public void assignMarkToHomework(HomeworkDTO homework) {
-        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homework.getId());
+    public void assignMarkToHomework(Long homeworkId, int mark) {
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
 
         // check if the homework exists
         if(!homeworkOptional.isPresent()){
@@ -736,7 +808,7 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         // assign a mark to the homework
-        homeworkOptional.get().setMark(homework.getMark());
+        homeworkOptional.get().setMark(mark);
 
         // set the flag to false
         homeworkOptional.get().setEditable(false);
@@ -761,6 +833,13 @@ public class TeacherServiceImp implements TeacherService {
         // check if the homework exists
         if (!homeworkOptional.isPresent()) {
             throw new TeacherServiceException("The homework doesn't exist");
+        }
+
+        // check if is possible to review the delivery
+        if(!homeworkOptional.get().getDeliveries()
+                .get(homeworkOptional.get().getDeliveries().size()-1)
+                .getStatus().equals(Delivery.Status.DELIVERED)){
+            throw new TeacherServiceException("Cannot review the delivery");
         }
 
         delivery.setStatus(Delivery.Status.REVIEWED);
@@ -821,6 +900,59 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         return byteArrayOutputStream.toByteArray();
+    }
+
+    @Override
+    public VMModelDTO getVMModel(String courseName) {
+        Optional<Course> courseOptional = this.courseRepository.findById(courseName);
+        Optional<VMModel> vmModel;
+
+        // check if the course exists
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
+        }
+
+        vmModel = this.vmModelRepository.findAll()
+                .stream()
+                .filter(x -> x.getCourse().getName().equals(courseName))
+                .findFirst();
+
+        // check if the vm model is present
+        if(!vmModel.isPresent()){
+            throw new TeacherServiceException("Virtual machine model does not exists");
+        }
+
+        return modelMapper.map(vmModel.get(), VMModelDTO.class);
+    }
+
+    @Override
+    public void setEditableHomework(Long homeworkId, boolean editable) {
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
+
+        // check if the homework exists
+        if(!homeworkOptional.isPresent()){
+            throw new TeacherServiceException("Homework does not exists");
+        }
+
+        // set the flag to false
+        homeworkOptional.get().setEditable(editable);
+
+        this.homeworkRepository.save(homeworkOptional.get());
+    }
+
+    @Override
+    public List<CourseDTO> getTeacherCourses(String teacherId) {
+        Optional<Teacher> teacherOptional = this.teacherRepository.findById(teacherId);
+
+        if(!teacherOptional.isPresent()){
+            throw new TeacherServiceException("Teacher does not exists");
+        }
+
+        return teacherOptional.get().getCourses()
+                .stream()
+                .map(x -> modelMapper.map(x, CourseDTO.class))
+                .collect(Collectors.toList());
+
     }
 
 }

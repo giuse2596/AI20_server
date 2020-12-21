@@ -430,6 +430,7 @@ public class StudentServiceImpl implements StudentService{
         File newFile;
         InputStream inputStream;
         OutputStream outputStream;
+        Delivery.Status status;
 
         // check if the homework exists
         if (!homeworkOptional.isPresent()) {
@@ -444,6 +445,14 @@ public class StudentServiceImpl implements StudentService{
         // check if the assignment is not expired
         if (deliveryDate.after(homeworkOptional.get().getAssignment().getExpiryDate())) {
             throw new StudentServiceException("Delivery date expired");
+        }
+
+        status = homeworkOptional.get().getDeliveries()
+                .get(homeworkOptional.get().getDeliveries().size()-1)
+                .getStatus();
+
+        if(!status.equals(Delivery.Status.READ) & !status.equals(Delivery.Status.REVIEWED)){
+            throw new StudentServiceException("Delivery not possible");
         }
 
         delivery.setStatus(Delivery.Status.DELIVERED);
@@ -537,6 +546,7 @@ public class StudentServiceImpl implements StudentService{
                         .filter(x -> x.getAssignment().getId().equals(assignmentId))
                         .collect(Collectors.toList()).get(0);
 
+        // if the last delivery has status NULL add a delivery with READ status
         if (
             homework.getDeliveries()
                     .get(homework.getDeliveries().size()-1)
@@ -544,6 +554,7 @@ public class StudentServiceImpl implements StudentService{
         ) {
             delivery.setHomework(homework);
             delivery.setTimestamp(new Timestamp(System.currentTimeMillis()));
+            delivery.setPathImage("src/main/resources/images/deliveries/empty_image.png");
             delivery.setStatus(Delivery.Status.READ);
             this.deliveryRepository.save(delivery);
         }

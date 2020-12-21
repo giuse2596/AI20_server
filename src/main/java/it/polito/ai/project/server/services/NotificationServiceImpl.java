@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -43,6 +44,7 @@ public class NotificationServiceImpl implements NotificationService{
     @Autowired
     public TeacherServiceImp teacherService;
 
+    @Async
     @Override
     public void sendMessage(String address, String subject, String body) {
         SimpleMailMessage message = new SimpleMailMessage();
