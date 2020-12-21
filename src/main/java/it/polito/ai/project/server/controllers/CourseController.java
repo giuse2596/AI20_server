@@ -67,21 +67,16 @@ public class CourseController {
                 .collect(Collectors.toList());
     }
 
-    @GetMapping("/{teacherid}")
-    public List<CourseDTO> getTeacherCourses(@PathVariable String teacherid,
-                                             @AuthenticationPrincipal UserDetails userDetails){
+    @GetMapping("/teacher_courses")
+    public List<CourseDTO> getTeacherCourses(@AuthenticationPrincipal UserDetails userDetails){
         Optional<Teacher> teacherOptional = teacherRepository.findById(userDetails.getUsername());
 
         if(!teacherOptional.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
-        if(!teacherid.equals(userDetails.getUsername())){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
         try{
-            return this.teacherService.getTeacherCourses(teacherid);
+            return this.teacherService.getTeacherCourses(userDetails.getUsername());
         }
         catch (TeacherServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
