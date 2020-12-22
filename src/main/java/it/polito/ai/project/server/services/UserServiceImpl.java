@@ -132,7 +132,8 @@ public class UserServiceImpl implements UserService{
         if(!userOptional.get().getPathImage().equals("src/main/resources/images/users/default_user.png")){
             newFile = new File(userOptional.get().getPathImage());
         } else {
-            newFile = new File("src/main/resources/images/users/" + username + ".png");
+            userOptional.get().setPathImage("src/main/resources/images/users/" + username + ".png");
+            newFile = new File(userOptional.get().getPathImage());
         }
 
         try {
