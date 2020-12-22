@@ -7,6 +7,7 @@ import it.polito.ai.project.server.services.*;
 import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -132,7 +133,7 @@ public class UserinfoController {
 
     }
 
-    @GetMapping("/{username}/user_image")
+    @GetMapping(value="/{username}/user_image", produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] getUserImage(@PathVariable String username,
                                @AuthenticationPrincipal UserDetails userDetails){
         Optional<User> userOptional = this.userRepository.findByUsername(userDetails.getUsername());
