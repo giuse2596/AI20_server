@@ -652,6 +652,9 @@ public class TeacherServiceImp implements TeacherService {
     public AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName) {
         Assignment newAssignemt = new Assignment();
         Optional<Course> courseOptional = courseRepository.findById(courseName);
+        File newFile;
+        InputStream inputStream;
+        OutputStream outputStream;
 
         // check if the course exists
         if(!courseOptional.isPresent()){
@@ -682,6 +685,30 @@ public class TeacherServiceImp implements TeacherService {
         // save the assignment
         this.assignmentRepository.save(newAssignemt);
 
+        // set path of the file
+        newAssignemt.setPathImage("src/main/resources/images/assignments/" +
+                newAssignemt.getId().toString() +
+                ".png");
+
+        newFile = new File(newAssignemt.getPathImage());
+
+        try {
+            inputStream = assignment.getMultipartFile().getInputStream();
+
+            if (!newFile.exists()) {
+                newFile.getParentFile().mkdir();
+            }
+            outputStream = new FileOutputStream(newFile);
+            int read = 0;
+            byte[] bytes = new byte[1024];
+
+            while ((read = inputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, read);
+            }
+        } catch (IOException e) {
+            throw  new TeacherServiceException("Error reading the file");
+        }
+
         // create homework with a delivery with the NULL status for all students
         courseOptional.get().getStudents()
                 .forEach(x -> {
@@ -700,43 +727,6 @@ public class TeacherServiceImp implements TeacherService {
                 });
 
         return modelMapper.map(newAssignemt, AssignmentDTO.class);
-    }
-
-    @Override
-    public void addImageToAssignment(Long assignmentId, MultipartFile multipartFile) {
-        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
-        File newFile;
-        InputStream inputStream = null;
-        OutputStream outputStream = null;
-
-        if(!assignmentOptional.isPresent()){
-            throw new TeacherServiceException("The assignment does not exists");
-        }
-
-        // set path of the file
-        assignmentOptional.get().setPathImage("src/main/resources/images/assignments/" +
-                assignmentOptional.get().getId().toString() +
-                ".png");
-
-        newFile = new File(assignmentOptional.get().getPathImage());
-
-        try {
-            inputStream = multipartFile.getInputStream();
-
-            if (!newFile.exists()) {
-                newFile.getParentFile().mkdir();
-            }
-            outputStream = new FileOutputStream(newFile);
-            int read = 0;
-            byte[] bytes = new byte[1024];
-
-            while ((read = inputStream.read(bytes)) != -1) {
-                outputStream.write(bytes, 0, read);
-            }
-        } catch (IOException e) {
-            throw  new TeacherServiceException("Error reading the file");
-        }
-
     }
 
     /**

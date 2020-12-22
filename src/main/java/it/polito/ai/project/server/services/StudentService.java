@@ -13,6 +13,5 @@ public interface StudentService {
     void deleteVirtualMachine(Long vmId, String studentId);
     void addVirtualMachineOwners(String owner, List<String> students, Long vmId);
     void uploadDelivery(Long homeworkId, MultipartFile multipartFile);
-    byte[] getDeliveryImage(Long deliveryId);
     byte[] getAssignmentImage(Long assignmentId, String studentId);
 }

@@ -40,6 +40,9 @@ public class GeneralServiceImpl implements GeneralService{
     UserRepository userRepository;
 
     @Autowired
+    DeliveryRepository deliveryRepository;
+
+    @Autowired
     ModelMapper modelMapper;
 
     /**
@@ -291,6 +294,32 @@ public class GeneralServiceImpl implements GeneralService{
             throw new StudentServiceException();
         }
 
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    /**
+     * Function to get the image of the specified delivery
+     * @param deliveryId the id of the delivery
+     * @return a byte array of the image associated to the delivery
+     */
+    @Override
+    public byte[] getDeliveryImage(Long deliveryId){
+        Optional<Delivery> deliveryOptional = this.deliveryRepository.findById(deliveryId);
+        BufferedImage bufferedImage;
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+        // check if the delivery exists
+        if (!deliveryOptional.isPresent()) {
+            throw new StudentServiceException();
+        }
+
+        try {
+            bufferedImage = ImageIO.read(new File(deliveryOptional.get().getPathImage()));
+            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+        }
+        catch (IOException e){
+            throw new StudentServiceException();
+        }
         return byteArrayOutputStream.toByteArray();
     }
 

@@ -17,4 +17,5 @@ public interface GeneralService {
     HomeworkDTO getStudentHomework(Long assignmentId, String studentId);
     VirtualMachineDTO getVirtualMachine(Long vmId);
     byte[] getVirtualMachineImage(Long vmId);
+    byte[] getDeliveryImage(Long deliveryId);
 }

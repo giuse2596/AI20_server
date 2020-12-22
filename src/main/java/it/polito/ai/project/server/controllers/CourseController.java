@@ -10,6 +10,7 @@ import it.polito.ai.project.server.repositories.CourseRepository;
 import it.polito.ai.project.server.repositories.TeacherRepository;
 import it.polito.ai.project.server.repositories.UserRepository;
 import it.polito.ai.project.server.services.*;
+import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,6 +25,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -175,13 +177,19 @@ public class CourseController {
     public List<Boolean> enrollStudents(@RequestParam("file") MultipartFile file,
                                         @PathVariable String name){
         Reader reader;
+        Tika tika = new Tika();
+        String mediaType;
+        List<String> supportedMediaTypes = new ArrayList<>();
 
-        if(!file.getContentType().equals("text/csv")){
-            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-        }
+        supportedMediaTypes.add("text/csv");
+        supportedMediaTypes.add("text/plain");
 
         try {
-             reader = new BufferedReader(new InputStreamReader(file.getInputStream()));
+            reader = new BufferedReader(new InputStreamReader(file.getInputStream()));
+            mediaType = tika.detect(file.getInputStream());
+            if(supportedMediaTypes.stream().noneMatch(x -> x.equals(mediaType))){
+                throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            }
         }
         catch (IOException e){
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
@@ -665,8 +673,24 @@ public class CourseController {
      */
     @PostMapping("/{name}/assignments")
     public AssignmentDTO createAssignment(@PathVariable String name,
-                                          @RequestBody AssignmentDTO assignmentDTO,
+                                          @Valid @ModelAttribute AssignmentDTO assignmentDTO,
                                           @AuthenticationPrincipal UserDetails userDetails){
+        Tika tika = new Tika();
+        String mediaType;
+        List<String> supportedMediaTypes = new ArrayList<>();
+
+        supportedMediaTypes.add("image/png");
+
+        // check media type of the file
+        try {
+            mediaType = tika.detect(assignmentDTO.getMultipartFile().getInputStream());
+            if(supportedMediaTypes.stream().noneMatch(x -> x.equals(mediaType))){
+                throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            }
+        }
+        catch (IOException e){
+            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        }
 
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
@@ -756,6 +780,23 @@ public class CourseController {
                                  @PathVariable Long homeworkid,
                                  @RequestBody MultipartFile multipartFile,
                                  @AuthenticationPrincipal UserDetails userDetails){
+        Tika tika = new Tika();
+        String mediaType;
+        List<String> supportedMediaTypes = new ArrayList<>();
+
+        supportedMediaTypes.add("image/png");
+
+        // check media type of the file
+        try {
+            mediaType = tika.detect(multipartFile.getInputStream());
+            if(supportedMediaTypes.stream().noneMatch(x -> x.equals(mediaType))){
+                throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            }
+        }
+        catch (IOException e){
+            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        }
+
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -771,29 +812,6 @@ public class CourseController {
         catch (StudentServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
-    }
-
-    @PostMapping("/{name}/assignments/{assignmentid}/image")
-    public void addImageToAssignment(@PathVariable Long assignmentid,
-                                     @PathVariable String name,
-                                     @RequestBody MultipartFile multipartFile,
-                                     @AuthenticationPrincipal UserDetails userDetails){
-        try{
-            if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-            }
-        }
-        catch (TeacherServiceException e){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        }
-
-        try{
-            this.teacherService.addImageToAssignment(assignmentid, multipartFile);
-        }
-        catch (TeacherServiceException e){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
-        }
-
     }
 
     /**
@@ -847,6 +865,40 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
 
+    }
+
+    /**
+     * Retrieve the image of a delivery
+     * @param studentid the student id
+     * @param deliveryid the delivery id
+     * @param userDetails the user who make the request
+     * @return the image of the delivery
+     */
+    @GetMapping(value = "/{name}/{studentid}/deliveries/{deliveryid}",
+            produces = MediaType.IMAGE_PNG_VALUE)
+    @ResponseStatus(HttpStatus.OK)
+    public byte[] getDeliveryImage(@PathVariable String studentid,
+                                   @PathVariable Long deliveryid,
+                                   @AuthenticationPrincipal UserDetails userDetails){
+        Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
+
+        if(!user.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
+        }
+
+        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
+                .collect(Collectors.toList())
+                .contains("ROLE_TEACHER") &
+                !userDetails.getUsername().equals(studentid)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        try{
+            return generalService.getDeliveryImage(deliveryid);
+        }
+        catch (StudentServiceException e){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
     }
 
 }

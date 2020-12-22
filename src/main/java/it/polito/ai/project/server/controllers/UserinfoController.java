@@ -4,6 +4,7 @@ import it.polito.ai.project.server.dtos.UserDTO;
 import it.polito.ai.project.server.entities.User;
 import it.polito.ai.project.server.repositories.UserRepository;
 import it.polito.ai.project.server.services.*;
+import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +16,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.io.IOException;
+import java.util.*;
 
 import static java.util.stream.Collectors.toList;
 import static org.springframework.http.ResponseEntity.ok;
@@ -98,6 +98,22 @@ public class UserinfoController {
                                 @PathVariable String username,
                                 @AuthenticationPrincipal UserDetails userDetails){
         Optional<User> userOptional = this.userRepository.findByUsername(userDetails.getUsername());
+        Tika tika = new Tika();
+        String mediaType;
+        List<String> supportedMediaTypes = new ArrayList<>();
+
+        supportedMediaTypes.add("image/png");
+
+        // check media type of the file
+        try {
+            mediaType = tika.detect(multipartFile.getInputStream());
+            if(supportedMediaTypes.stream().noneMatch(x -> x.equals(mediaType))){
+                throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            }
+        }
+        catch (IOException e){
+            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        }
 
         if(!userOptional.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");

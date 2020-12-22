@@ -22,7 +22,6 @@ public interface TeacherService {
     List<Boolean> enrollCSV(Reader r, String courseName);
     void changeVMvalues(TeamDTO newTeam, String courseName);
     AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName);
-    void addImageToAssignment(Long assignmentId, MultipartFile multipartFile);
     void removeAssignment(Long assignmentId, String courseName);
     void assignMarkToHomework(Long homeworkId, int mark);
     void revisionDelivery(Long homeworkId, MultipartFile multipartFile);

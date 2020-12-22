@@ -2,6 +2,7 @@ package it.polito.ai.project.server.controllers;
 
 import it.polito.ai.project.server.dtos.*;
 import it.polito.ai.project.server.services.*;
+import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -12,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -425,6 +428,22 @@ public class StudentController {
                                @AuthenticationPrincipal UserDetails userDetails,
                                @RequestBody MultipartFile multipartFile){
         Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
+        Tika tika = new Tika();
+        String mediaType;
+        List<String> supportedMediaTypes = new ArrayList<>();
+
+        supportedMediaTypes.add("image/png");
+
+        // check media type of the file
+        try {
+            mediaType = tika.detect(multipartFile.getInputStream());
+            if(supportedMediaTypes.stream().noneMatch(x -> x.equals(mediaType))){
+                throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            }
+        }
+        catch (IOException e){
+            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        }
 
         if(!student.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
@@ -437,38 +456,6 @@ public class StudentController {
 
         try{
             studentService.uploadDelivery(homeworkid, multipartFile);
-        }
-        catch (StudentServiceException e){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
-        }
-    }
-
-    /**
-     * Retrieve the image of a delivery
-     * @param id the student id
-     * @param deliveryid the delivery id
-     * @param userDetails the user who make the request
-     * @return the image of the delivery
-     */
-    @GetMapping(value = "/{id}/{coursename}/{assignmentid}/{homeworkid}/deliveries/{deliveryid}",
-            produces = MediaType.IMAGE_PNG_VALUE)
-    @ResponseStatus(HttpStatus.OK)
-    public byte[] getDeliveryImage(@PathVariable String id,
-                                   @PathVariable Long deliveryid,
-                                   @AuthenticationPrincipal UserDetails userDetails){
-        Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
-
-        if(!student.isPresent()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
-        }
-
-        // check if the student is the same of {id}
-        if(!student.get().getId().equals(id)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
-        try{
-            return studentService.getDeliveryImage(deliveryid);
         }
         catch (StudentServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
