@@ -23,10 +23,10 @@ public interface TeacherService {
     void changeVMvalues(TeamDTO newTeam, String courseName);
     AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName);
     void removeAssignment(Long assignmentId, String courseName);
-    void assignMarkToHomework(Long homeworkId, int mark);
+    void assignMarkToHomework(HomeworkDTO homeworkDTO);
     void revisionDelivery(Long homeworkId, MultipartFile multipartFile);
     byte[] getAssignmentImage(Long assignmentId);
     VMModelDTO getVMModel(String courseName);
-    void setEditableHomework(Long homeworkId, boolean editable);
+    void setEditableHomework(HomeworkDTO homeworkDTO);
     List<CourseDTO> getTeacherCourses(String teacherId);
 }

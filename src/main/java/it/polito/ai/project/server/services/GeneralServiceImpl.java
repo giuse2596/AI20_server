@@ -261,43 +261,6 @@ public class GeneralServiceImpl implements GeneralService{
     }
 
     /**
-     * Get an existing virtual machine
-     * @param vmId the virtual machine id
-     * @return the virtual machine image
-     */
-    @Override
-    public byte[] getVirtualMachineImage(Long vmId){
-        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
-        BufferedImage bufferedImage;
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-
-        // check if the vm exists
-        if(!virtualMachineOptional.isPresent()){
-            throw new StudentServiceException("Virtual machine doesn't exist");
-        }
-
-        // check if the course is enabled
-        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
-            throw new StudentServiceException("Course not enabled");
-        }
-
-        // check if the team is active
-        if(!virtualMachineOptional.get().getTeam().isActive()){
-            throw new StudentServiceException("Team not active");
-        }
-
-        try {
-            bufferedImage = ImageIO.read(new File(virtualMachineOptional.get().getPathImage()));
-            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
-        }
-        catch (IOException e){
-            throw new StudentServiceException();
-        }
-
-        return byteArrayOutputStream.toByteArray();
-    }
-
-    /**
      * Function to get the image of the specified delivery
      * @param deliveryId the id of the delivery
      * @return a byte array of the image associated to the delivery

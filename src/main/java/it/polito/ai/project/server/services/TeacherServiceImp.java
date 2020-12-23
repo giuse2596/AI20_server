@@ -785,12 +785,11 @@ public class TeacherServiceImp implements TeacherService {
 
     /**
      * Assign a mark to an homework
-     * @param homeworkId the homework id
-     * @param mark the mark of the homework
+     * @param homeworkDTO the homework with the mark to set
      */
     @Override
-    public void assignMarkToHomework(Long homeworkId, int mark) {
-        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
+    public void assignMarkToHomework(HomeworkDTO homeworkDTO) {
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
 
         // check if the homework exists
         if(!homeworkOptional.isPresent()){
@@ -798,7 +797,7 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         // assign a mark to the homework
-        homeworkOptional.get().setMark(mark);
+        homeworkOptional.get().setMark(homeworkDTO.getMark());
 
         // set the flag to false
         homeworkOptional.get().setEditable(false);
@@ -916,8 +915,8 @@ public class TeacherServiceImp implements TeacherService {
     }
 
     @Override
-    public void setEditableHomework(Long homeworkId, boolean editable) {
-        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
+    public void setEditableHomework(HomeworkDTO homeworkDTO) {
+        Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
 
         // check if the homework exists
         if(!homeworkOptional.isPresent()){
@@ -925,7 +924,7 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         // set the flag to false
-        homeworkOptional.get().setEditable(editable);
+        homeworkOptional.get().setEditable(homeworkDTO.isEditable());
 
         this.homeworkRepository.save(homeworkOptional.get());
     }

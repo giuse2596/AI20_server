@@ -324,7 +324,7 @@ public class CourseController {
      */
     @GetMapping(value="/{name}/teams/{teamid}/virtual_machines/{vmid}/image",
             produces = MediaType.IMAGE_PNG_VALUE)
-    public byte[] getVirtualMachineImage(@PathVariable Long teamid,
+    public String getVirtualMachineImage(@PathVariable Long teamid,
                                          @PathVariable Long vmid,
                                          @AuthenticationPrincipal UserDetails userDetails){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
@@ -352,7 +352,7 @@ public class CourseController {
         }
 
         try{
-            return this.generalService.getVirtualMachineImage(vmid);
+            return "virtual_machine.html";
         }
         catch (StudentServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
@@ -716,14 +716,23 @@ public class CourseController {
      * Set the mark of an homework
      * @param name the name of the course
      * @param homeworkid the homework id
-     * @param mark the mark of the homework
+     * @param homeworkDTO the homework with the mark set
      * @param userDetails the user who make the request
      */
     @PutMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}")
     public void assignMarkToHomework(@PathVariable String name,
                                      @PathVariable Long homeworkid,
-                                     @RequestBody int mark,
+                                     @RequestBody HomeworkDTO homeworkDTO,
                                      @AuthenticationPrincipal UserDetails userDetails){
+
+        if(homeworkDTO.getId() == null){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
+        // check if the homeworkid is the same of the homeworkDTO
+        if(homeworkid != homeworkDTO.getId()){
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
 
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
@@ -735,7 +744,7 @@ public class CourseController {
         }
 
         try{
-            this.teacherService.assignMarkToHomework(homeworkid, mark);
+            this.teacherService.assignMarkToHomework(homeworkDTO);
         }
         catch (TeacherServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
@@ -746,8 +755,17 @@ public class CourseController {
     @PutMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}/editable")
     public void setEditableHomework(@PathVariable String name,
                                      @PathVariable Long homeworkid,
-                                     @RequestBody boolean editable,
+                                     @RequestBody HomeworkDTO homeworkDTO,
                                      @AuthenticationPrincipal UserDetails userDetails){
+
+        if(homeworkDTO.getId() == null){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
+        // check if the homeworkid is the same of the homeworkDTO
+        if(homeworkid != homeworkDTO.getId()){
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
+        }
 
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
@@ -759,7 +777,7 @@ public class CourseController {
         }
 
         try{
-            this.teacherService.setEditableHomework(homeworkid, editable);
+            this.teacherService.setEditableHomework(homeworkDTO);
         }
         catch (TeacherServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());

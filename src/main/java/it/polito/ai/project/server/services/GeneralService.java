@@ -16,6 +16,5 @@ public interface GeneralService {
     UserDTO modifyUser(UserDTO userDTO);
     HomeworkDTO getStudentHomework(Long assignmentId, String studentId);
     VirtualMachineDTO getVirtualMachine(Long vmId);
-    byte[] getVirtualMachineImage(Long vmId);
     byte[] getDeliveryImage(Long deliveryId);
 }
