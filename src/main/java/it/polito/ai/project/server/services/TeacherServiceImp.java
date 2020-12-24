@@ -800,7 +800,7 @@ public class TeacherServiceImp implements TeacherService {
         homeworkOptional.get().setMark(homeworkDTO.getMark());
 
         // set the flag to false
-        homeworkOptional.get().setEditable(false);
+        homeworkOptional.get().setEditable(homeworkDTO.isEditable());
 
         this.homeworkRepository.save(homeworkOptional.get());
 

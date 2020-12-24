@@ -256,6 +256,28 @@ public class CourseController {
     }
 
     /**
+     * Retrieve all not enabled teams
+     * @param name the name of the course
+     * @return the list of teams not enabled for a course
+     */
+    @GetMapping("/{name}/teams/not_enabled")
+    public List<TeamDTO> getCourseNotEnabledTeams(@PathVariable String name){
+        Optional<CourseDTO> course = generalService.getCourse(name);
+
+        if(!course.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, name);
+        }
+
+        try{
+            return teamService.getTeamsNotEnabled(name);
+        }
+        catch (CourseNotFoundException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+    }
+
+    /**
      * Retrieve the team's students
      * @param teamid the team id
      * @return the list of students that are in the team
@@ -713,21 +735,17 @@ public class CourseController {
     }
 
     /**
-     * Set the mark of an homework
+     * Modify an homework
      * @param name the name of the course
      * @param homeworkid the homework id
-     * @param homeworkDTO the homework with the mark set
+     * @param homeworkDTO the homework modified
      * @param userDetails the user who make the request
      */
     @PutMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}")
-    public void assignMarkToHomework(@PathVariable String name,
-                                     @PathVariable Long homeworkid,
-                                     @RequestBody HomeworkDTO homeworkDTO,
-                                     @AuthenticationPrincipal UserDetails userDetails){
-
-        if(homeworkDTO.getId() == null){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
+    public void modifyHomework(@PathVariable String name,
+                               @PathVariable Long homeworkid,
+                               @RequestBody @Valid HomeworkDTO homeworkDTO,
+                               @AuthenticationPrincipal UserDetails userDetails){
 
         // check if the homeworkid is the same of the homeworkDTO
         if(homeworkid != homeworkDTO.getId()){
@@ -744,40 +762,11 @@ public class CourseController {
         }
 
         try{
-            this.teacherService.assignMarkToHomework(homeworkDTO);
-        }
-        catch (TeacherServiceException e){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        }
-
-    }
-
-    @PutMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}/editable")
-    public void setEditableHomework(@PathVariable String name,
-                                     @PathVariable Long homeworkid,
-                                     @RequestBody HomeworkDTO homeworkDTO,
-                                     @AuthenticationPrincipal UserDetails userDetails){
-
-        if(homeworkDTO.getId() == null){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        }
-
-        // check if the homeworkid is the same of the homeworkDTO
-        if(homeworkid != homeworkDTO.getId()){
-            throw new ResponseStatusException(HttpStatus.CONFLICT);
-        }
-
-        try{
-            if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            if(homeworkDTO.getMark() == null){
+                this.teacherService.setEditableHomework(homeworkDTO);
+            }else{
+                this.teacherService.assignMarkToHomework(homeworkDTO);
             }
-        }
-        catch (TeacherServiceException e){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
-        }
-
-        try{
-            this.teacherService.setEditableHomework(homeworkDTO);
         }
         catch (TeacherServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());

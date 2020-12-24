@@ -94,6 +94,55 @@ public class TeamServiceImpl implements TeamService {
     }
 
     /**
+     * Retrieve the team of a student given the course name
+     * @param studentId the student id
+     * @param courseName the course id
+     * @return the team of the student
+     */
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @Override
+    public TeamDTO getTeamForStudent(String studentId, String courseName) {
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+        Team team;
+
+        // check if the student exists
+        if(!studentOptional.isPresent()){
+            throw new StudentNotFoundExeption();
+        }
+
+        team = studentOptional.get()
+                .getTeams()
+                .stream()
+                .filter(x -> x.getCourse().getName().equals(courseName))
+                .findFirst()
+                .get();
+
+        return modelMapper.map(team, TeamDTO.class);
+
+    }
+
+    /**
+     * Retrieve all teams not active for a course
+     * @param courseName the name of the course
+     * @return the teams not active for a course
+     */
+    @Override
+    public List<TeamDTO> getTeamsNotEnabled(String courseName) {
+        Optional<Course> courseOptional = this.courseRepository.findById(courseName);
+
+        // check if the course exists
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
+        }
+
+        return courseOptional.get().getTeams()
+                .stream()
+                .filter(x -> !x.isActive())
+                .map(x -> modelMapper.map(x, TeamDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Retrieve all the members of an existing team
      * @param teamId the team id
      * @return the list of students that belong to the specified team

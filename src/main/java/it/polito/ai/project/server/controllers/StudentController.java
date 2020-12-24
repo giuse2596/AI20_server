@@ -114,6 +114,36 @@ public class StudentController {
     }
 
     /**
+     * Retrieve the team of a student
+     * @param id the student id
+     * @param coursename the name of the course
+     * @param userDetails the user who make the request
+     * @return the team of a student for a given course
+     */
+    @GetMapping("/{id}/teams/{coursename}")
+    public TeamDTO getTeam(@PathVariable String id, @PathVariable String coursename,
+                           @AuthenticationPrincipal UserDetails userDetails){
+        Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
+
+        if(!student.isPresent()){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
+        }
+
+        // check if the student is the same of {id}
+        if(!student.get().getId().equals(id)){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        try{
+            return this.teamService.getTeamForStudent(id, coursename);
+        }
+        catch (StudentNotFoundExeption e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+
+    }
+
+    /**
      * Retrieve the students that confirm to join a team
      * @param id the student id
      * @param teamid the team id

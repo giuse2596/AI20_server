@@ -13,6 +13,8 @@ public interface TeamService {
     List<CourseDTO> getAllCourses();
     List<CourseDTO> getCourses(String studentId);
     List<TeamDTO> getTeamsForStudent(String studentId);
+    TeamDTO getTeamForStudent(String studentId, String courseName);
+    List<TeamDTO> getTeamsNotEnabled(String courseName);
     List<StudentDTO>getMembers(Long teamId);
     TeamDTO proposeTeam(String courseId, String name, String proposer, List<String> memberIds);
     List<StudentDTO> getStudentsInTeams(String courseName);
