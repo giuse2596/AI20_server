@@ -451,6 +451,7 @@ public class StudentServiceImpl implements StudentService{
                 .get(homeworkOptional.get().getDeliveries().size()-1)
                 .getStatus();
 
+        // check to avoid multiple uploads
         if(!status.equals(Delivery.Status.READ) & !status.equals(Delivery.Status.REVIEWED)){
             throw new StudentServiceException("Delivery not possible");
         }

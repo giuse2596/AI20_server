@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.validation.constraints.NotNull;
+import java.sql.Date;
 import java.util.List;
 
 @RestController
@@ -52,7 +54,8 @@ public class NotificationController {
                         @PathVariable String courseName,
                         @PathVariable String team,
                         @PathVariable String proposerid,
-                        @RequestBody List<String> students
+                        @RequestBody List<String> students,
+                        @RequestParam @NotNull Date expiryDate
                     )
     {
         TeamDTO teamDTO;
@@ -67,7 +70,7 @@ public class NotificationController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
 
-       notificationService.notifyTeam(teamDTO, students);
+       notificationService.notifyTeam(teamDTO, students, expiryDate);
 
     }
 

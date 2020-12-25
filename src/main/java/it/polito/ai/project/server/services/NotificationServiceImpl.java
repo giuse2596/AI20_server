@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -122,13 +123,9 @@ public class NotificationServiceImpl implements NotificationService{
     }
 
     @Override
-    public void notifyTeam(TeamDTO dto, List<String> memberIds) {
+    public void notifyTeam(TeamDTO dto, List<String> memberIds, Date expiryDate) {
         String s1, s2, email;
-        Timestamp ts = new Timestamp(System.currentTimeMillis());
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(ts);
-        cal.add(Calendar.HOUR, 1);
-        ts = new Timestamp(cal.getTime().getTime());
+        Timestamp ts = new Timestamp(expiryDate.getTime());
 
         for(String student : memberIds){
 
