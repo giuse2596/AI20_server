@@ -7,7 +7,7 @@ import java.io.Reader;
 import java.util.List;
 
 public interface TeacherService {
-    boolean teacherInCourse(String teahcerId, String couseName);
+    boolean teacherInCourse(String teacherId, String couseName);
     boolean addCourse(CourseDTO course, String teacherId, VMModelDTO vmModelDTO);
     boolean removeCourse(String coursename);
     void modifyCourse(String courseId, int min, int max);

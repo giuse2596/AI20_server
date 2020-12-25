@@ -63,13 +63,13 @@ public class TeacherServiceImp implements TeacherService {
 
     /**
      * Function to see if a theacher belongs to a course
-     * @param teahcerId teahcer id
+     * @param teacherId teahcer id
      * @param courseName course name
      * @return true if the course is among the teacher ones
      */
     @Override
-    public boolean teacherInCourse(String teahcerId, String courseName) {
-        Optional<Teacher> teacherOptional = this.teacherRepository.findById(teahcerId);
+    public boolean teacherInCourse(String teacherId, String courseName) {
+        Optional<Teacher> teacherOptional = this.teacherRepository.findById(teacherId);
         Optional<Course> courseOptional = this.courseRepository.findById(courseName);
 
         if(!courseOptional.isPresent()){

@@ -69,6 +69,11 @@ public class CourseController {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieve all courses of a teacher
+     * @param userDetails the user who make the request
+     * @return the list of courses of a teacher
+     */
     @GetMapping("/teacher_courses")
     public List<CourseDTO> getTeacherCourses(@AuthenticationPrincipal UserDetails userDetails){
         Optional<Teacher> teacherOptional = teacherRepository.findById(userDetails.getUsername());
@@ -132,6 +137,7 @@ public class CourseController {
     public CourseDTO addCourse(@Valid @RequestBody CourseModelDTO courseModelDTO,
                                @AuthenticationPrincipal UserDetails userDetails){
 
+        // add the course
         if (
                 !teacherService.addCourse(
                         courseModelDTO.getCourseDTO(),
@@ -155,7 +161,20 @@ public class CourseController {
      */
     @PostMapping("/{name}/enrollOne")
     @ResponseStatus(HttpStatus.CREATED)
-    public void enrollStudent(@Valid @RequestBody StudentDTO studentDTO, @PathVariable String name){
+    public void enrollStudent(@Valid @RequestBody StudentDTO studentDTO,
+                              @PathVariable String name,
+                              @AuthenticationPrincipal UserDetails userDetails){
+
+        // check if the user is a teacher of the course
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+
         try{
              if(!teacherService.addStudentToCourse(studentDTO.getId(), name)){
                  throw new ResponseStatusException(HttpStatus.NOT_ACCEPTABLE, studentDTO.getId()+""+name);
@@ -175,7 +194,8 @@ public class CourseController {
     @PostMapping("/{name}/enrollMany")
     @ResponseStatus(HttpStatus.CREATED)
     public List<Boolean> enrollStudents(@RequestParam("file") MultipartFile file,
-                                        @PathVariable String name){
+                                        @PathVariable String name,
+                                        @AuthenticationPrincipal UserDetails userDetails){
         Reader reader;
         Tika tika = new Tika();
         String mediaType;
@@ -183,6 +203,16 @@ public class CourseController {
 
         supportedMediaTypes.add("text/csv");
         supportedMediaTypes.add("text/plain");
+
+        // check if the user is a teacher of the course
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
 
         try {
             reader = new BufferedReader(new InputStreamReader(file.getInputStream()));
@@ -242,6 +272,7 @@ public class CourseController {
     public List<TeamDTO> getCourseTeams(@PathVariable String name){
         Optional<CourseDTO> course = generalService.getCourse(name);
 
+        // check if the course exists
         if(!course.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, name);
         }
@@ -264,6 +295,7 @@ public class CourseController {
     public List<TeamDTO> getCourseNotEnabledTeams(@PathVariable String name){
         Optional<CourseDTO> course = generalService.getCourse(name);
 
+        // check if the course exists
         if(!course.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, name);
         }
@@ -283,7 +315,11 @@ public class CourseController {
      * @return the list of students that are in the team
      */
     @GetMapping("/{name}/teams/{teamid}")
-    public List<StudentDTO> getTeamMembers(@PathVariable Long teamid){
+    public List<StudentDTO> getTeamMembers(@PathVariable Long teamid,
+                                           @AuthenticationPrincipal UserDetails userDetails){
+
+
+
         try{
             return this.teamService.getMembers(teamid);
         }
@@ -299,15 +335,18 @@ public class CourseController {
      * @return the list of team's virtual machines
      */
     @GetMapping("/{name}/teams/{teamid}/virtula_machines")
-    public List<VirtualMachineDTO> getTeamVritualMachines(@PathVariable Long teamid,
+    public List<VirtualMachineDTO> getTeamVritualMachines(@PathVariable String name,
+                                                          @PathVariable Long teamid,
                                                           @AuthenticationPrincipal UserDetails userDetails){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
         List<String> members;
 
+        // check if user is present
         if(!user.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
+        // retrieve team members
         try{
             members = this.teamService.getMembers(teamid)
                     .stream()
@@ -318,11 +357,15 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
-        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
-                .collect(Collectors.toList())
-                .contains("ROLE_TEACHER") &
-                !members.contains(userDetails.getUsername())){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        // check if the user is a teacher of the course or a team member
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name) &
+                    !members.contains(userDetails.getUsername())){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
 
         try{
@@ -346,7 +389,8 @@ public class CourseController {
      */
     @GetMapping(value="/{name}/teams/{teamid}/virtual_machines/{vmid}/image",
             produces = MediaType.IMAGE_PNG_VALUE)
-    public String getVirtualMachineImage(@PathVariable Long teamid,
+    public String getVirtualMachineImage(@PathVariable String name,
+                                         @PathVariable Long teamid,
                                          @PathVariable Long vmid,
                                          @AuthenticationPrincipal UserDetails userDetails){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
@@ -357,6 +401,7 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
+        // retrieve team members
         try{
             members = this.teamService.getMembers(teamid)
                     .stream()
@@ -367,11 +412,26 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
-        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
+        // check if the user is a teacher of the course or a team member
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name) &
+                    !members.contains(userDetails.getUsername())){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
+
+        // check if the virtual machine belongs to the team
+        if(
+                !this.teamService.getTeamVirtualMachines(teamid)
+                .stream()
+                .map(x -> x.getId())
                 .collect(Collectors.toList())
-                .contains("ROLE_TEACHER") &
-                !members.contains(userDetails.getUsername())){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+                .contains(vmid)
+        ){
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
 
         try{
@@ -449,7 +509,7 @@ public class CourseController {
      */
     @GetMapping("/{name}/assignments")
     public List<AssignmentDTO> getCourseAssignments(@PathVariable String name){
-        Optional<Course> courseOptional = this.courseRepository.findById(name);
+        Optional<CourseDTO> courseOptional = this.generalService.getCourse(name);
 
         if(!courseOptional.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
@@ -471,7 +531,8 @@ public class CourseController {
      * @return the list of all the deliveries for an assignment
      */
     @GetMapping("/{name}/assignments/{assignmentid}/{studentid}")
-    public List<DeliveryDTO> getAssignmentDeliveries(@PathVariable Long assignmentid,
+    public List<DeliveryDTO> getAssignmentDeliveries(@PathVariable String name,
+                                                     @PathVariable Long assignmentid,
                                                      @PathVariable String studentid,
                                                      @AuthenticationPrincipal UserDetails userDetails
     ){
@@ -481,11 +542,15 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
-        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
-                .collect(Collectors.toList())
-                .contains("ROLE_TEACHER") &
-                !userDetails.getUsername().equals(studentid)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        // check if the user is a teacher of the course or a student
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name) &
+                    !userDetails.getUsername().equals(studentid)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
 
         try {
@@ -504,7 +569,8 @@ public class CourseController {
      * @return the last delivery of the student for an assignment
      */
     @GetMapping("/{name}/assignments/{assignmentid}/{studentid}/last")
-    public DeliveryDTO getAssignmentDelivery(@PathVariable Long assignmentid,
+    public DeliveryDTO getAssignmentDelivery(@PathVariable String name,
+                                             @PathVariable Long assignmentid,
                                              @PathVariable String studentid,
                                              @AuthenticationPrincipal UserDetails userDetails
     ){
@@ -514,11 +580,15 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
-        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
-                .collect(Collectors.toList())
-                .contains("ROLE_TEACHER") &
-                !userDetails.getUsername().equals(studentid)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        // check if the user is a teacher of the course or a student
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name) &
+                    !userDetails.getUsername().equals(studentid)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
 
         try {
@@ -570,6 +640,7 @@ public class CourseController {
                              @RequestParam int max,
                              @AuthenticationPrincipal UserDetails userDetails){
 
+        // check if is a teacher of the course
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -613,6 +684,8 @@ public class CourseController {
     public void removeStudentFromCourse(@PathVariable String name,
                                         @PathVariable String studentid,
                                         @AuthenticationPrincipal UserDetails userDetails){
+
+        // check if is a teacher of the course
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -639,7 +712,8 @@ public class CourseController {
      * @return the homework DTO of the student
      */
     @GetMapping("/{name}/assignments/{assignmentsid}/homeworks/{studentid}")
-    public HomeworkDTO getStudentHomework(@PathVariable Long assignmentsid,
+    public HomeworkDTO getStudentHomework(@PathVariable String name,
+                                          @PathVariable Long assignmentsid,
                                           @PathVariable String studentid,
                                           @AuthenticationPrincipal UserDetails userDetails){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
@@ -648,11 +722,15 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
-        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
-                .collect(Collectors.toList())
-                .contains("ROLE_TEACHER") &
-                !userDetails.getUsername().equals(studentid)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        // check if the user is a teacher of the course or a student
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name) &
+                    !userDetails.getUsername().equals(studentid)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
 
         try{
@@ -673,6 +751,8 @@ public class CourseController {
     public void changeVMValues(@PathVariable String name,
                                @RequestBody TeamDTO team,
                                @AuthenticationPrincipal UserDetails userDetails){
+
+        // check if is a teacher of the course
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -721,6 +801,7 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
 
+        // check if is a teacher of the course
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -742,7 +823,7 @@ public class CourseController {
     }
 
     /**
-     * Modify an homework
+     * Modify an homework, set the mark or editable flag
      * @param name the name of the course
      * @param homeworkid the homework id
      * @param homeworkDTO the homework modified
@@ -759,6 +840,7 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
 
+        // check if is a teacher of the course
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -811,6 +893,7 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
 
+        // check if is a teacher of the course
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -840,6 +923,8 @@ public class CourseController {
     public byte[] getAssignmentImage(@PathVariable String name,
                                      @PathVariable Long assignmentid,
                                      @AuthenticationPrincipal UserDetails userDetails){
+
+        // check if is a teacher of the course
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -863,6 +948,8 @@ public class CourseController {
     @GetMapping("/{name}/virtual_machine_model")
     public VMModelDTO getVMModel(@PathVariable String name,
                                  @AuthenticationPrincipal UserDetails userDetails){
+
+        // check if is a teacher of the course
         try{
             if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -891,7 +978,8 @@ public class CourseController {
     @GetMapping(value = "/{name}/{studentid}/deliveries/{deliveryid}",
             produces = MediaType.IMAGE_PNG_VALUE)
     @ResponseStatus(HttpStatus.OK)
-    public byte[] getDeliveryImage(@PathVariable String studentid,
+    public byte[] getDeliveryImage(@PathVariable String name,
+                                   @PathVariable String studentid,
                                    @PathVariable Long deliveryid,
                                    @AuthenticationPrincipal UserDetails userDetails){
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
@@ -900,11 +988,15 @@ public class CourseController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
-        if(!userDetails.getAuthorities().stream().map(x -> x.getAuthority())
-                .collect(Collectors.toList())
-                .contains("ROLE_TEACHER") &
-                !userDetails.getUsername().equals(studentid)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        // check if the user is a teacher of the course or a student
+        try{
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name) &
+                    !userDetails.getUsername().equals(studentid)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+        }
+        catch (TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
         }
 
         try{
