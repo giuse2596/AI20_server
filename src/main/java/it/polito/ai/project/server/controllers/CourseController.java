@@ -352,6 +352,7 @@ public class CourseController {
         Optional<User> user = userRepository.findByUsername(userDetails.getUsername());
         List<String> members;
 
+        // check if the user is present
         if(!user.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
@@ -374,9 +375,15 @@ public class CourseController {
         }
 
         try{
-            return "virtual_machine.html";
+
+            // check if the image can be retrieved
+            if(this.generalService.getVirtualMachineImage(vmid)){
+                return "virtual_machine";
+            } else{
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
         }
-        catch (StudentServiceException e){
+        catch (GeneralServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
     }
