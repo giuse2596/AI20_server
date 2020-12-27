@@ -48,6 +48,27 @@ public class StudentServiceImpl implements StudentService{
     ModelMapper modelMapper;
 
     /**
+     * Retrieve all courses the student is enrolled in
+     * @param studentId the student id
+     * @return list of all the courses the student is enrolled in
+     */
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @Override
+    public List<CourseDTO> getCourses(String studentId) {
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+
+        // check if the student exists
+        if(!studentOptional.isPresent()){
+            throw new StudentNotFoundExeption();
+        }
+        return studentOptional.get()
+                .getCourses()
+                .stream()
+                .map(x -> modelMapper.map(x, CourseDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Function to create a virtual machine for a given team
      * @param virtualMachineDTO virtual machine DTO
      * @param teamId team to which the virtual machine belongs
@@ -166,8 +187,8 @@ public class StudentServiceImpl implements StudentService{
             throw new StudentServiceException("Virtual machine doesn't exists");
         }
 
-        // check if the vm is active
-        if (!virtualMachineOptional.get().isActive()){
+        // check if the vm is active, it must be stopped to modify it
+        if (virtualMachineOptional.get().isActive()){
             throw new StudentServiceException("Virtual machine is not active");
         }
 
@@ -236,6 +257,7 @@ public class StudentServiceImpl implements StudentService{
     public void startVirtualMachine(Long vmId, String studentId){
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+        long activeVMs;
 
         // check if the vm exist
         if(!virtualMachineOptional.isPresent()){
@@ -265,6 +287,19 @@ public class StudentServiceImpl implements StudentService{
                             .count() < 1
         ) {
             throw new StudentServiceException("The student is not one of the vm owners");
+        }
+
+        // take all team active vm
+        activeVMs = virtualMachineOptional.get()
+                .getTeam()
+                .getVirtualMachines()
+                .stream()
+                .filter(VirtualMachine::isActive)
+                .count();
+
+        // check if can be activated another virtual machine
+        if ((activeVMs + 1) > virtualMachineOptional.get().getTeam().getActiveVM()) {
+            throw new StudentServiceException("Active VM limit reached");
         }
 
         virtualMachineOptional.get().setActive(true);
@@ -304,7 +339,7 @@ public class StudentServiceImpl implements StudentService{
         // check if the student is one of the owner of the virtual machine
         if (virtualMachineOptional.get().getOwners()
                 .stream()
-                .map(x -> x.getId())
+                .map(Student::getId)
                 .filter( x -> x.equals(studentId))
                 .count() < 1
         ) {
@@ -343,7 +378,7 @@ public class StudentServiceImpl implements StudentService{
         // check if the student is one of the owner of the virtual machine
         if (!virtualMachineOptional.get().getOwners()
                 .stream()
-                .map(x -> x.getId())
+                .map(Student::getId)
                 .collect(Collectors.toList())
                 .contains(studentId)
         ) {
@@ -351,8 +386,9 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // delete the virtual machine from all the students and the team
-        virtualMachineOptional.get().getOwners()
-                            .forEach(x -> virtualMachineOptional.get().removeOwner(x));
+        virtualMachineOptional.get()
+                .getOwners()
+                .forEach(x -> virtualMachineOptional.get().removeOwner(x));
         virtualMachineOptional.get().setTeam(null);
 
         this.virtualMachinesRepository.deleteById(vmId);
@@ -417,12 +453,14 @@ public class StudentServiceImpl implements StudentService{
 
     /**
      * Function to upload a delivery for a student homework
+     * @param studentId student id
      * @param homeworkId homework id
      * @param multipartFile file to store
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
-    public void uploadDelivery(Long homeworkId, MultipartFile multipartFile){
+    public void uploadDelivery(String studentId, Long homeworkId, MultipartFile multipartFile){
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         Date deliveryDate = Date.valueOf(timestamp.toLocalDateTime().toLocalDate());
@@ -432,14 +470,29 @@ public class StudentServiceImpl implements StudentService{
         OutputStream outputStream;
         Delivery.Status status;
 
+        // check if the student exists
+        if (!studentOptional.isPresent()) {
+            throw new StudentNotFoundExeption();
+        }
+
         // check if the homework exists
         if (!homeworkOptional.isPresent()) {
             throw new StudentServiceException("The homework doesn't exist");
         }
 
+        // check if the homework belongs to the student
+        if (!homeworkOptional.get().getStudent().getId().equals(studentId)) {
+            throw new StudentServiceException("The homework doesn't belogns to the student");
+        }
+
         // check if the homework is editable
         if (!homeworkOptional.get().isEditable()) {
             throw new StudentServiceException("Homework not editable");
+        }
+
+        // check if the course is enabled
+        if (!homeworkOptional.get().getAssignment().getCourse().isEnabled()) {
+            throw new StudentServiceException("Course not enabled");
         }
 
         // check if the assignment is not expired
@@ -501,7 +554,7 @@ public class StudentServiceImpl implements StudentService{
         BufferedImage bufferedImage;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         Delivery delivery = new Delivery();
-        Homework homework;
+        Optional<Homework> homeworkOptional;
 
         // check if the student exists
         if (!studentOptional.isPresent()) {
@@ -514,19 +567,25 @@ public class StudentServiceImpl implements StudentService{
         }
 
         // get the homework for the given assignment
-        homework = studentOptional.get()
+        homeworkOptional = studentOptional.get()
                         .getHomeworks()
                         .stream()
                         .filter(x -> x.getAssignment().getId().equals(assignmentId))
-                        .collect(Collectors.toList()).get(0);
+                        .findFirst();
+
+        // check if exists an homework for the given assignment
+        if (!homeworkOptional.isPresent()) {
+            throw new StudentServiceException();
+        }
 
         // if the last delivery has status NULL add a delivery with READ status
         if (
-            homework.getDeliveries()
-                    .get(homework.getDeliveries().size()-1)
+            homeworkOptional.get()
+                    .getDeliveries()
+                    .get(homeworkOptional.get().getDeliveries().size()-1)
                     .getStatus().equals(Delivery.Status.NULL)
         ) {
-            delivery.setHomework(homework);
+            delivery.setHomework(homeworkOptional.get());
             delivery.setTimestamp(new Timestamp(System.currentTimeMillis()));
             delivery.setPathImage("src/main/resources/images/deliveries/empty_image.png");
             delivery.setStatus(Delivery.Status.READ);

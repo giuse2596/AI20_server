@@ -42,6 +42,11 @@ public class UserServiceImpl implements UserService{
     private ModelMapper modelMapper;
 
     @Override
+    public Optional<UserDTO> getUser(String username) {
+        return this.userRepository.findByUsername(username).map(x -> modelMapper.map(x, UserDTO.class));
+    }
+
+    @Override
     public UserDTO registerStudent(UserDTO userDTO) {
         User user = new User();
         Student student = new Student();
@@ -116,6 +121,38 @@ public class UserServiceImpl implements UserService{
         }
 
         return userOptional.get();
+    }
+
+    @Override
+    public UserDTO modifyUser(UserDTO userDTO) {
+        Optional<User> userOptional = this.userRepository.findByUsername(userDTO.getUsername());
+        Optional<Student> studentOptional;
+        Optional<Teacher> teacherOptional;
+        String[] splittedEmail = userDTO.getEmail().trim().split("@");
+
+        // check if user exists
+        if(!userOptional.isPresent()){
+            throw new GeneralServiceException("User not found");
+        }
+
+        userOptional.get().setName(userDTO.getName());
+        userOptional.get().setFirstName(userDTO.getFirstName());
+        userOptional.get().setPassword(userDTO.getPassword());
+
+        if (splittedEmail[1].equals("studenti.polito.it")) {
+            studentOptional = this.studentRepository.findById(userDTO.getUsername());
+            studentOptional.get().setName(userDTO.getName());
+            studentOptional.get().setFirstName(userDTO.getFirstName());
+        }
+        else {
+            teacherOptional = this.teacherRepository.findById(userDTO.getUsername());
+            teacherOptional.get().setName(userDTO.getName());
+            teacherOptional.get().setFirstName(userDTO.getFirstName());
+        }
+
+        this.userRepository.save(userOptional.get());
+
+        return modelMapper.map(userOptional.get(), UserDTO.class);
     }
 
     @Override

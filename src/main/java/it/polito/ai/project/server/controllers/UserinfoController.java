@@ -30,9 +30,6 @@ public class UserinfoController {
     UserService userService;
 
     @Autowired
-    UserRepository userRepository;
-
-    @Autowired
     NotificationService notificationService;
 
     @Autowired
@@ -58,11 +55,11 @@ public class UserinfoController {
 
         try {
             // student registration
-            if (splittedEmail[1].equals("studenti.polito.it")) {
+            if (splittedEmail[1].equals("studenti.polito.it") & splittedEmail[0].startsWith("s")) {
                 user = this.userService.registerStudent(userDTO);
             }
             // teacher registration
-            else if (splittedEmail[1].equals("polito.it")) {
+            else if (splittedEmail[1].equals("polito.it") & splittedEmail[0].startsWith("d")) {
                 user = this.userService.registerTeacher(userDTO);
             } else {
                 // received an invalid email
@@ -79,14 +76,14 @@ public class UserinfoController {
     @PutMapping("/modify_user")
     public UserDTO modifyUser(@RequestBody UserDTO userDTO,
                               @AuthenticationPrincipal UserDetails userDetails){
-        Optional<User> userOptional = this.userRepository.findByUsername(userDetails.getUsername());
+        Optional<UserDTO> userOptional = this.userService.getUser(userDetails.getUsername());
 
         if(!userOptional.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
         try{
-            return this.generalService.modifyUser(userDTO);
+            return this.userService.modifyUser(userDTO);
         }
         catch (GeneralServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
@@ -98,7 +95,7 @@ public class UserinfoController {
     public void modifyUserImage(@RequestBody MultipartFile multipartFile,
                                 @PathVariable String username,
                                 @AuthenticationPrincipal UserDetails userDetails){
-        Optional<User> userOptional = this.userRepository.findByUsername(userDetails.getUsername());
+        Optional<UserDTO> userOptional = this.userService.getUser(userDetails.getUsername());
         Tika tika = new Tika();
         String mediaType;
         List<String> supportedMediaTypes = new ArrayList<>();
@@ -120,7 +117,7 @@ public class UserinfoController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        // check if the user is the same of {id}
+        // check if the user is the same of {username}
         if(!userOptional.get().getUsername().equals(username)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
@@ -136,13 +133,13 @@ public class UserinfoController {
     @GetMapping(value="/{username}/user_image", produces = MediaType.IMAGE_PNG_VALUE)
     public byte[] getUserImage(@PathVariable String username,
                                @AuthenticationPrincipal UserDetails userDetails){
-        Optional<User> userOptional = this.userRepository.findByUsername(userDetails.getUsername());
+        Optional<UserDTO> userOptional = this.userService.getUser(userDetails.getUsername());
 
         if(!userOptional.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        // check if the user is the same of {id}
+        // check if the user is the same of {username}
         if(!userOptional.get().getUsername().equals(username)){
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }

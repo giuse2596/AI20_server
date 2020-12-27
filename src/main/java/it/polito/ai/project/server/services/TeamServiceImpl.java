@@ -40,36 +40,48 @@ public class TeamServiceImpl implements TeamService {
     TeacherServiceImp teacherService;
 
     /**
-     * Retrieve all the courses present in the db
-     * @return a list of all the courses present in the db
+     * Retrive active team given a course
+     * @param courseName course name
+     * @return list of active course team
      */
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public List<CourseDTO> getAllCourses() {
-        return courseRepository.findAll()
+    public List<TeamDTO> getEnabledTeamsForCourse(String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+
+        // check if the course exist
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
+        }
+        return courseOptional
+                .get()
+                .getTeams()
                 .stream()
-                .map(x -> modelMapper.map(x, CourseDTO.class))
+                .filter(Team::isActive)
+                .map(x -> modelMapper.map(x, TeamDTO.class))
                 .collect(Collectors.toList());
     }
 
     /**
-     * Retrieve all courses the student is enrolled in
-     * @param studentId the student id
-     * @return list of all the courses the student is enrolled in
+     * Retrieve the existing team for an existing course
+     * @param courseName the course name
+     * @return list of all the teams in the course
      */
-    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public List<CourseDTO> getCourses(String studentId) {
-        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+    public List<TeamDTO> getTeamsForCourse(String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
 
-        // check if the student exists
-        if(!studentOptional.isPresent()){
-            return null;
+        // check if the course exist
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
         }
-        return studentOptional.get()
-                    .getCourses()
-                    .stream()
-                    .map(x -> modelMapper.map(x, CourseDTO.class))
-                    .collect(Collectors.toList());
+        return courseOptional
+                .get()
+                .getTeams()
+                .stream()
+                .map(x -> modelMapper.map(x, TeamDTO.class))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -103,42 +115,111 @@ public class TeamServiceImpl implements TeamService {
     @Override
     public TeamDTO getTeamForStudent(String studentId, String courseName) {
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
-        Team team;
+        Optional<Course> courseOptional = this.courseRepository.findById(courseName);
+        Optional<Team> team;
 
         // check if the student exists
         if(!studentOptional.isPresent()){
             throw new StudentNotFoundExeption();
         }
 
+        // check if the course exists
+        if (!courseOptional.isPresent()) {
+            throw new CourseNotFoundException();
+        }
+
+        // check if the student is enrolled to the course
+        if (!courseOptional.get()
+                .getStudents()
+                .stream()
+                .map(x->x.getId())
+                .collect(Collectors.toList())
+                .contains(studentId)
+        ) {
+            throw new TeamServiceException();
+        }
+
+        // take the active team of the specified course
         team = studentOptional.get()
                 .getTeams()
                 .stream()
-                .filter(x -> x.getCourse().getName().equals(courseName))
-                .findFirst()
-                .get();
+                .filter(x ->
+                        x.isActive() &
+                        x.getCourse().getName().equals(courseName))
+                .findFirst();
+
+        if (!team.isPresent()) {
+            throw new TeamNotFoundException();
+        }
 
         return modelMapper.map(team, TeamDTO.class);
 
     }
 
     /**
-     * Retrieve all teams not active for a course
+     * Retrieve all student teams not active for a course
      * @param courseName the name of the course
+     * @param studentId the student id
      * @return the teams not active for a course
      */
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
-    public List<TeamDTO> getTeamsNotEnabled(String courseName) {
+    public List<TeamDTO> getStudentTeamsNotEnabled(String courseName, String studentId) {
         Optional<Course> courseOptional = this.courseRepository.findById(courseName);
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
 
         // check if the course exists
         if(!courseOptional.isPresent()){
             throw new CourseNotFoundException();
         }
 
-        return courseOptional.get().getTeams()
+        // check if the student exists
+        if (!studentOptional.isPresent()) {
+            throw new StudentNotFoundExeption();
+        }
+
+        return studentOptional.get()
+                .getTeams()
                 .stream()
-                .filter(x -> !x.isActive())
-                .map(x -> modelMapper.map(x, TeamDTO.class))
+                // select team not enabled belonging to the given course
+                .filter(x ->
+                    x.getCourse().getName().equals(courseName) &
+                    !x.isActive()
+                )
+                .map(x -> this.modelMapper.map(x, TeamDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieve all student teams active for a course
+     * @param courseName the name of the course
+     * @param studentId the student id
+     * @return the teams not active for a course
+     */
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
+    @Override
+    public List<TeamDTO> getStudentTeamsEnabled(String courseName, String studentId) {
+        Optional<Course> courseOptional = this.courseRepository.findById(courseName);
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+
+        // check if the course exists
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
+        }
+
+        // check if the student exists
+        if (!studentOptional.isPresent()) {
+            throw new StudentNotFoundExeption();
+        }
+
+        return studentOptional.get()
+                .getTeams()
+                .stream()
+                // select team enabled belonging to the given course
+                .filter(x ->
+                        x.getCourse().getName().equals(courseName) & x.isActive()
+                )
+                .map(x -> this.modelMapper.map(x, TeamDTO.class))
                 .collect(Collectors.toList());
     }
 
@@ -239,7 +320,7 @@ public class TeamServiceImpl implements TeamService {
         }
 
         // check if exist other teams with the same name in the course
-        if(teacherService.getTeamForCourse(courseId).stream()
+        if(this.getTeamsForCourse(courseId).stream()
                             .anyMatch(x -> x.getName().equals(name))
         ){
             throw new TeamServiceException();
@@ -358,35 +439,11 @@ public class TeamServiceImpl implements TeamService {
     }
 
     /**
-     * Retrieve all the team virtual machine
-     * @param teamId the team id
-     * @return all the team virtual machine
-     */
-    public List<VirtualMachineDTO> getTeamVirtualMachines(Long teamId){
-        Optional<Team> teamOptional = this.teamRepository.findById(teamId);
-
-        // check if the team exists
-        if (!teamOptional.isPresent()) {
-            throw new TeamNotFoundException();
-        }
-
-        // check if the course is enabled
-        if(!teamOptional.get().getCourse().isEnabled()){
-            throw new StudentServiceException("Course not enabled");
-        }
-
-        return teamOptional.get()
-                .getVirtualMachines()
-                .stream()
-                .map(x -> modelMapper.map(x, VirtualMachineDTO.class))
-                .collect(Collectors.toList());
-    }
-
-    /**
      * Retrieve the list of the students that confirmed to join in one team
      * @param teamId the team id
      * @return the list of the students that confirmed to join in one team
      */
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
     public List<StudentDTO> getConfirmedMembersTeam(Long teamId) {
         Optional<Team> teamOptional = teamRepository.findById(teamId);
@@ -416,6 +473,7 @@ public class TeamServiceImpl implements TeamService {
      * @param teamId the team id
      * @return the list of pendant members
      */
+    @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
     public List<StudentDTO> getPendentMembersTeam(Long teamId) {
         Optional<Team> teamOptional = teamRepository.findById(teamId);

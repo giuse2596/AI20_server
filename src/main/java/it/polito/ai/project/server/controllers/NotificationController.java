@@ -55,7 +55,7 @@ public class NotificationController {
                         @PathVariable String team,
                         @PathVariable String proposerid,
                         @RequestBody List<String> students,
-                        @RequestParam @NotNull Date expiryDate
+                        @RequestParam @NotNull Long expiryOffset
                     )
     {
         TeamDTO teamDTO;
@@ -70,7 +70,7 @@ public class NotificationController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
 
-       notificationService.notifyTeam(teamDTO, students, expiryDate);
+       notificationService.notifyTeam(teamDTO, students, expiryOffset);
 
     }
 

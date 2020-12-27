@@ -40,10 +40,25 @@ public class GeneralServiceImpl implements GeneralService{
     UserRepository userRepository;
 
     @Autowired
+    TeamRepository teamRepository;
+
+    @Autowired
     DeliveryRepository deliveryRepository;
 
     @Autowired
     ModelMapper modelMapper;
+
+    /**
+     * Retrieve all the courses present in the db
+     * @return a list of all the courses present in the db
+     */
+    @Override
+    public List<CourseDTO> getAllCourses() {
+        return courseRepository.findAll()
+                .stream()
+                .map(x -> modelMapper.map(x, CourseDTO.class))
+                .collect(Collectors.toList());
+    }
 
     /**
      * Retrieve an existing course
@@ -79,6 +94,27 @@ public class GeneralServiceImpl implements GeneralService{
     }
 
     /**
+     * Retrieve all students enrolled in a specific existing course
+     * @param courseName the course string to retrieve all the students enrolled in it
+     * @return a list of students
+     */
+    @Override
+    public List<StudentDTO> getEnrolledStudents(String courseName) {
+        Optional<Course> courseOptional = courseRepository.findById(courseName);
+
+        // check if the course exists
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
+        }
+        return courseOptional
+                .get()
+                .getStudents()
+                .stream()
+                .map(x -> modelMapper.map(x, StudentDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Retrieve the assignment object
      * @param assignmentId the id of the assignment
      * @return the assignment DTO
@@ -107,7 +143,7 @@ public class GeneralServiceImpl implements GeneralService{
 
         //check if the course exists
         if(!courseOptional.isPresent()){
-            throw new TeacherServiceException("Course not found");
+            throw new CourseNotFoundException();
         }
 
         assignments = courseOptional.get().getAssignments();
@@ -126,22 +162,34 @@ public class GeneralServiceImpl implements GeneralService{
     @Override
     public DeliveryDTO getAssignmentLastDelivery(Long assignmentId, String studentId) {
         Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
-        Optional<DeliveryDTO> deliveryDTOOptional;
+        Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+        Optional<Homework> homeworkOptional;
 
         // check if the assignment exists
         if(!assignmentOptional.isPresent()){
-            throw new TeacherServiceException("Assignment not found");
+            throw new GeneralServiceException();
         }
 
-        deliveryDTOOptional = assignmentOptional.get().getHomeworks()
-                .stream()
-                .filter(x -> x.getStudent().getId().equals(studentId))
-                // there will be always one homework for the given couple assignment-student
-                .findFirst()
-                .map(x -> x.getDeliveries().get(x.getDeliveries().size()-1))
-                .map(x -> modelMapper.map(x, DeliveryDTO.class));
+        // check if the student exists
+        if(!studentOptional.isPresent()){
+            throw new StudentNotFoundExeption();
+        }
 
-        return deliveryDTOOptional.get();
+        homeworkOptional = assignmentOptional.get().getHomeworks()
+                    .stream()
+                    .filter(x -> x.getStudent().getId().equals(studentId))
+                    .findFirst();
+
+        // check if there is exists, assignment and student not correlated
+        if (!homeworkOptional.isPresent()) {
+            throw new GeneralServiceException();
+        }
+
+        return modelMapper.map(
+                homeworkOptional.get()
+                .getDeliveries()
+                .get(homeworkOptional.get().getDeliveries().size()-1),
+                DeliveryDTO.class);
     }
 
     /**
@@ -154,65 +202,47 @@ public class GeneralServiceImpl implements GeneralService{
     public List<DeliveryDTO> getAssignmentStudentDeliveries(Long assignmentId, String studentId) {
         Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
-        List<DeliveryDTO> deliveries;
+        List<Homework> homeworkList;
 
         // check if the assignment exists
         if(!assignmentOptional.isPresent()){
-            throw new TeacherServiceException("Assignment not found");
+            throw new GeneralServiceException();
         }
 
         // check if the student exists
         if(!studentOptional.isPresent()){
-            throw new TeacherServiceException("Student not found");
+            throw new StudentNotFoundExeption();
         }
 
-        deliveries =  assignmentOptional.get().getHomeworks()
+        homeworkList =  assignmentOptional.get().getHomeworks()
                 .stream()
                 .filter(x -> x.getStudent().getId().equals(studentId))
-                .flatMap(x -> x.getDeliveries().stream())
-                .map(x -> modelMapper.map(x, DeliveryDTO.class))
                 .collect(Collectors.toList());
 
-        return deliveries;
+        // check if there is at least one homework in case
+        // assignment and student are not correlated
+        if (homeworkList.size() == 0) {
+            throw new GeneralServiceException();
+        }
+
+        // there is always only one homework
+        return homeworkList.get(0).getDeliveries()
+                .stream()
+                .map(x -> modelMapper.map(x, DeliveryDTO.class))
+                .collect(Collectors.toList());
     }
 
-    @Override
-    public UserDTO modifyUser(UserDTO userDTO) {
-        Optional<User> userOptional = this.userRepository.findByUsername(userDTO.getUsername());
-        Optional<Student> studentOptional;
-        Optional<Teacher> teacherOptional;
-        String[] splittedEmail = userDTO.getEmail().trim().split("@");
-
-        // check if user exists
-        if(!userOptional.isPresent()){
-            throw new GeneralServiceException("User not found");
-        }
-
-        userOptional.get().setName(userDTO.getName());
-        userOptional.get().setFirstName(userDTO.getFirstName());
-        userOptional.get().setPassword(userDTO.getPassword());
-
-        if (splittedEmail[1].equals("studenti.polito.it")) {
-            studentOptional = this.studentRepository.findById(userDTO.getUsername());
-            studentOptional.get().setName(userDTO.getName());
-            studentOptional.get().setFirstName(userDTO.getFirstName());
-        }
-        else {
-            teacherOptional = this.teacherRepository.findById(userDTO.getUsername());
-            teacherOptional.get().setName(userDTO.getName());
-            teacherOptional.get().setFirstName(userDTO.getFirstName());
-        }
-
-        this.userRepository.save(userOptional.get());
-
-        return modelMapper.map(userOptional.get(), UserDTO.class);
-    }
-
+    /**
+     * Retrieve student homework given an assignment
+     * @param assignmentId assignment id
+     * @param studentId student id
+     * @return homework dto
+     */
     @Override
     public HomeworkDTO getStudentHomework(Long assignmentId, String studentId) {
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
         Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
-        Homework homework;
+        Optional<Homework> homeworkOptional;
 
         // check if student exists
         if(!studentOptional.isPresent()){
@@ -221,15 +251,20 @@ public class GeneralServiceImpl implements GeneralService{
 
         // check if the assignment exists
         if(!assignmentOptional.isPresent()){
-            throw new StudentServiceException("The assignment does not exists");
+            throw new GeneralServiceException();
         }
 
-        homework = assignmentOptional.get().getHomeworks()
+        homeworkOptional = assignmentOptional.get().getHomeworks()
                 .stream()
                 .filter(x -> x.getStudent().getId().equals(studentId))
-                .findFirst().get();
+                .findFirst();
 
-        return modelMapper.map(homework, HomeworkDTO.class);
+        // check if the homework exists
+        if(!homeworkOptional.isPresent()){
+            throw new GeneralServiceException();
+        }
+
+        return modelMapper.map(homeworkOptional.get(), HomeworkDTO.class);
     }
 
     /**
@@ -258,6 +293,32 @@ public class GeneralServiceImpl implements GeneralService{
 
         return this.modelMapper.map(virtualMachineOptional.get(),
                 VirtualMachineDTO.class);
+    }
+
+    /**
+     * Retrieve all the team virtual machine
+     * @param teamId the team id
+     * @return all the team virtual machine
+     */
+    @Override
+    public List<VirtualMachineDTO> getTeamVirtualMachines(Long teamId){
+        Optional<Team> teamOptional = this.teamRepository.findById(teamId);
+
+        // check if the team exists
+        if (!teamOptional.isPresent()) {
+            throw new TeamNotFoundException();
+        }
+
+        // check if the course is enabled
+        if(!teamOptional.get().getCourse().isEnabled()){
+            throw new StudentServiceException("Course not enabled");
+        }
+
+        return teamOptional.get()
+                .getVirtualMachines()
+                .stream()
+                .map(x -> modelMapper.map(x, VirtualMachineDTO.class))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -306,7 +367,7 @@ public class GeneralServiceImpl implements GeneralService{
 
         // check if the delivery exists
         if (!deliveryOptional.isPresent()) {
-            throw new StudentServiceException();
+            throw new GeneralServiceException();
         }
 
         try {
@@ -314,7 +375,7 @@ public class GeneralServiceImpl implements GeneralService{
             ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
         }
         catch (IOException e){
-            throw new StudentServiceException();
+            throw new GeneralServiceException();
         }
         return byteArrayOutputStream.toByteArray();
     }

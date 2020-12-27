@@ -123,9 +123,9 @@ public class NotificationServiceImpl implements NotificationService{
     }
 
     @Override
-    public void notifyTeam(TeamDTO dto, List<String> memberIds, Date expiryDate) {
+    public void notifyTeam(TeamDTO dto, List<String> memberIds, Long expiryOffset) {
         String s1, s2, email;
-        Timestamp ts = new Timestamp(expiryDate.getTime());
+        Timestamp ts = new Timestamp(System.currentTimeMillis() + expiryOffset);
 
         for(String student : memberIds){
 

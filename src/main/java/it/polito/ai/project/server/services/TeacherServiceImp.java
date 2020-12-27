@@ -73,7 +73,7 @@ public class TeacherServiceImp implements TeacherService {
         Optional<Course> courseOptional = this.courseRepository.findById(courseName);
 
         if(!courseOptional.isPresent()){
-            throw new TeacherServiceException("Course does not exists");
+            throw new CourseNotFoundException();
         }
 
         if(!teacherOptional.isPresent()){
@@ -187,70 +187,50 @@ public class TeacherServiceImp implements TeacherService {
 
     /**
      * modify the course attributes
-     * @param min the min value for student's team
-     * @param max the max value for student's team
-     * @param courseId the courseId
+     * @param courseDTO the course dto
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public void modifyCourse(String courseId, int min, int max) {
-        Course courseToUpdate;
-        Optional<Course> courseOptional = courseRepository.findById(courseId);
+    public void modifyCourse(CourseDTO courseDTO) {
+        Optional<Course> courseOptional = courseRepository.findById(courseDTO.getName());
 
         // check if the course exists
         if (!courseOptional.isPresent()) {
             throw new CourseNotFoundException();
         }
 
-        // get the course
-        courseToUpdate = courseOptional.get();
+        // check if the course sent and the one in the db are both not enabled
+        // otherwise it means the teacher want to enable the course
+        if (!courseOptional.get().isEnabled() & !courseDTO.isEnabled()) {
+            throw new TeacherServiceException("Course not enabled");
+        }
 
         // check if there are teams in a course
-        if(courseToUpdate.getTeams().size() > 0){
+        if(courseOptional.get().getTeams().size() > 0){
 
             // check if there are teams with a number of members
             // smaller than the min value or grater than the max
             if(
-                    courseToUpdate.getTeams()
+                    courseOptional.get().getTeams()
                     .stream()
                     .map(x -> x.getMembers().size())
-                    .min(Integer::compare).get() < min
+                    .min(Integer::compare).get() < courseDTO.getMin()
                     |
-                    courseToUpdate.getTeams()
+                    courseOptional.get().getTeams()
                     .stream()
                     .map(x -> x.getMembers().size())
-                    .max(Integer::compare).get() > max
+                    .max(Integer::compare).get() > courseDTO.getMax()
             ){
                 throw new TeacherServiceException("Min or max values cannot be changed");
             }
         }
 
         // update the course fields
-        courseToUpdate.setMin(min);
-        courseToUpdate.setMax(max);
+        courseOptional.get().setMin(courseDTO.getMin());
+        courseOptional.get().setMax(courseDTO.getMax());
+        courseOptional.get().setEnabled(courseDTO.isEnabled());
 
-        this.courseRepository.save(courseToUpdate);
-    }
-
-    /**
-     * Retrieve all students enrolled in a specific existing course
-     * @param courseName the course string to retrieve all the students enrolled in it
-     * @return a list of students
-     */
-    @Override
-    public List<StudentDTO> getEnrolledStudents(String courseName) {
-        Optional<Course> courseOptional = courseRepository.findById(courseName);
-
-        // check if the course exists
-        if(!courseOptional.isPresent()){
-            throw new CourseNotFoundException();
-        }
-        return courseOptional
-                .get()
-                .getStudents()
-                .stream()
-                .map(x -> modelMapper.map(x, StudentDTO.class))
-                .collect(Collectors.toList());
+        this.courseRepository.save(courseOptional.get());
     }
 
     /**
@@ -324,7 +304,7 @@ public class TeacherServiceImp implements TeacherService {
 
         // check if the teacher exist
         if(!teacherOptional.isPresent()){
-            throw new StudentNotFoundExeption();
+            throw new TeacherServiceException();
         }
 
         // check if the course is enabled
@@ -334,8 +314,7 @@ public class TeacherServiceImp implements TeacherService {
 
         // check if the course already contains the teacher
         if (
-                courseOptional
-                        .get()
+                courseOptional.get()
                         .getTeachers()
                         .contains(teacherOptional.get() )
         )
@@ -345,8 +324,7 @@ public class TeacherServiceImp implements TeacherService {
 
         // check if the teacher already has the course
         if(
-                teacherOptional
-                        .get()
+                teacherOptional.get()
                         .getCourses()
                         .contains(courseOptional.get() )
         )
@@ -442,63 +420,6 @@ public class TeacherServiceImp implements TeacherService {
         courseOptional.get().removeStudent(studentOptional.get());
 
         return true;
-    }
-
-    /**
-     * Enable an existing course
-     * @param courseName the name of the course to enable
-     */
-    @PreAuthorize("hasRole('ROLE_TEACHER')")
-    @Override
-    public void enableCourse(String courseName) {
-        Optional<Course> courseOptional = courseRepository.findById(courseName);
-
-        // check if the course exist
-        if(!courseOptional.isPresent()){
-            throw new CourseNotFoundException();
-        }
-        courseOptional
-                .get()
-                .setEnabled(true);
-    }
-
-    /**
-     * Disable an existing course
-     * @param courseName the name of the course to disable
-     */
-    @PreAuthorize("hasRole('ROLE_TEACHER')")
-    @Override
-    public void disableCourse(String courseName) {
-        Optional<Course> courseOptional = courseRepository.findById(courseName);
-
-        // check if the course exist
-        if(!courseOptional.isPresent()){
-            throw new CourseNotFoundException();
-        }
-        courseOptional
-                .get()
-                .setEnabled(false);
-    }
-
-    /**
-     * Retrieve the existing team for an existing course
-     * @param courseName the course name
-     * @return list of all the teams in the course
-     */
-    @Override
-    public List<TeamDTO> getTeamForCourse(String courseName) {
-        Optional<Course> courseOptional = courseRepository.findById(courseName);
-
-        // check if the course exist
-        if(!courseOptional.isPresent()){
-            throw new CourseNotFoundException();
-        }
-        return courseOptional
-                .get()
-                .getTeams()
-                .stream()
-                .map(x -> modelMapper.map(x, TeamDTO.class))
-                .collect(Collectors.toList());
     }
 
     /**
@@ -788,6 +709,7 @@ public class TeacherServiceImp implements TeacherService {
      * @param homeworkDTO the homework with the mark to set
      */
     @Override
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     public void assignMarkToHomework(HomeworkDTO homeworkDTO) {
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
 
@@ -812,6 +734,7 @@ public class TeacherServiceImp implements TeacherService {
      * @param multipartFile the review of the teacher
      */
     @Override
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     public void revisionDelivery(Long homeworkId, MultipartFile multipartFile) {
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
         Delivery delivery = new Delivery();
@@ -870,6 +793,7 @@ public class TeacherServiceImp implements TeacherService {
      * @return the image of the assignment
      */
     @Override
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     public byte[] getAssignmentImage(Long assignmentId) {
         Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
         BufferedImage bufferedImage;
@@ -891,6 +815,12 @@ public class TeacherServiceImp implements TeacherService {
         return byteArrayOutputStream.toByteArray();
     }
 
+    /**
+     * Function to retrieve vm model dto
+     * @param courseName course name
+     * @return vm model dto
+     */
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public VMModelDTO getVMModel(String courseName) {
         Optional<Course> courseOptional = this.courseRepository.findById(courseName);
@@ -914,6 +844,11 @@ public class TeacherServiceImp implements TeacherService {
         return modelMapper.map(vmModel.get(), VMModelDTO.class);
     }
 
+    /**
+     * Set an homework to editable/not editable
+     * @param homeworkDTO homework dto with the editable field setted
+     */
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public void setEditableHomework(HomeworkDTO homeworkDTO) {
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkDTO.getId());
@@ -929,6 +864,12 @@ public class TeacherServiceImp implements TeacherService {
         this.homeworkRepository.save(homeworkOptional.get());
     }
 
+    /**
+     * Function to retrieve teacher courses
+     * @param teacherId teacher id
+     * @return list of teacher courses dto
+     */
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public List<CourseDTO> getTeacherCourses(String teacherId) {
         Optional<Teacher> teacherOptional = this.teacherRepository.findById(teacherId);
@@ -942,6 +883,28 @@ public class TeacherServiceImp implements TeacherService {
                 .map(x -> modelMapper.map(x, CourseDTO.class))
                 .collect(Collectors.toList());
 
+    }
+
+    /**
+     * Function to retrieve assignment homework
+     * @param assignmentId assignment id
+     * @return list of assignment homework
+     */
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
+    @Override
+    public List<HomeworkDTO> getHomework(Long assignmentId) {
+        Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
+
+        // check if assignment exists
+        if (!assignmentOptional.isPresent()) {
+            throw new TeacherServiceException();
+        }
+
+        return assignmentOptional.get()
+                .getHomeworks()
+                .stream()
+                .map(x -> this.modelMapper.map(x, HomeworkDTO.class))
+                .collect(Collectors.toList());
     }
 
 }

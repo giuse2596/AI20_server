@@ -10,7 +10,7 @@ public interface NotificationService {
     void sendMessage(String address, String subject, String body);
     boolean confirm(String token);
     boolean reject(String token);
-    void notifyTeam(TeamDTO dto, List<String> memberIds, Date expiryDate);
+    void notifyTeam(TeamDTO dto, List<String> memberIds, Long expiryOffset);
     void notifyInscription(UserDTO userDTO);
     boolean confirmRegistration(String token);
 }

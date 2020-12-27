@@ -6,6 +6,7 @@ import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +35,9 @@ public class StudentController {
 
     @Autowired
     GeneralService generalService;
+
+    @Autowired
+    UserService userService;
 
     ModelHelper modelHelper;
 
@@ -72,22 +76,34 @@ public class StudentController {
     @GetMapping("/{id}/courses")
     public List<CourseDTO> getCourses(@AuthenticationPrincipal UserDetails userDetails,
                                       @PathVariable String id){
-        Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
+        Optional<UserDTO> userOptional = this.userService.getUser(userDetails.getUsername());
+        List<String> roles = userDetails
+                .getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority).collect(Collectors.toList());
 
-        if(!student.isPresent()){
+        if(!userOptional.isPresent()){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, userDetails.getUsername());
         }
 
-        // check if the student is the same of {id}
-        if(!student.get().getId().equals(id)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        // if is a student
+        if (roles.contains("STUDENT")) {
+            // check if the student is the same of {id}
+            if (!userDetails.getUsername().equals(id)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
         }
 
-        return teamService
-                .getCourses(userDetails.getUsername())
-                .stream()
-                .map(x -> modelHelper.enrich(x))
-                .collect(Collectors.toList());
+        try {
+            return this.studentService
+                    .getCourses(userDetails.getUsername())
+                    .stream()
+                    .map(x -> modelHelper.enrich(x))
+                    .collect(Collectors.toList());
+        }
+        catch (StudentNotFoundExeption e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
+        }
     }
 
     /**
@@ -95,23 +111,23 @@ public class StudentController {
      * @param id the id of the student
      * @return the list of the teams where the student is in
      */
-    @GetMapping("/{id}/teams")
-    public List<TeamDTO> getTeams(@PathVariable String id,
-                                  @AuthenticationPrincipal UserDetails userDetails){
-        Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
-
-        if(!student.isPresent()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
-        }
-
-        // check if the student is the same of {id}
-        if(!student.get().getId().equals(id)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
-        return teamService
-                .getTeamsForStudent(id);
-    }
+//    @GetMapping("/{id}/teams")
+//    public List<TeamDTO> getTeams(@PathVariable String id,
+//                                  @AuthenticationPrincipal UserDetails userDetails){
+//        Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
+//
+//        if(!student.isPresent()){
+//            throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
+//        }
+//
+//        // check if the student is the same of {id}
+//        if(!student.get().getId().equals(id)){
+//            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+//        }
+//
+//        return teamService
+//                .getTeamsForStudent(id);
+//    }
 
     /**
      * Retrieve the team of a student
@@ -123,22 +139,21 @@ public class StudentController {
     @GetMapping("/{id}/teams/{coursename}")
     public TeamDTO getTeam(@PathVariable String id, @PathVariable String coursename,
                            @AuthenticationPrincipal UserDetails userDetails){
-        Optional<StudentDTO> student = generalService.getStudent(userDetails.getUsername());
-
-        if(!student.isPresent()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
-        }
-
-        // check if the student is the same of {id}
-        if(!student.get().getId().equals(id)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
 
         try{
+            // check that is the one specified in the url
+            if (userDetails.getUsername().equals(id)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
             return this.teamService.getTeamForStudent(id, coursename);
         }
-        catch (StudentNotFoundExeption e){
+        catch (StudentNotFoundExeption | TeacherServiceException |
+                CourseNotFoundException | TeamNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        catch (TeamServiceException e){
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
     }
@@ -169,18 +184,13 @@ public class StudentController {
         try{
             if(!this.teamService.getMembers(teamid)
                     .stream()
-                    .map(x -> x.getId())
+                    .map(StudentDTO::getId)
                     .collect(Collectors.toList())
                     .contains(student.get().getId())
             ){
                 throw new ResponseStatusException(HttpStatus.CONFLICT);
             }
-        }
-        catch (TeamNotFoundException e){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
 
-        try{
             return this.teamService.getConfirmedMembersTeam(teamid);
         }
         catch (TeamNotFoundException e){
@@ -221,12 +231,7 @@ public class StudentController {
             ){
                 throw new ResponseStatusException(HttpStatus.CONFLICT);
             }
-        }
-        catch (TeamNotFoundException e){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        }
 
-        try{
             return this.teamService.getPendentMembersTeam(teamid);
         }
         catch (TeamNotFoundException e){
@@ -298,7 +303,7 @@ public class StudentController {
             studentService.changeVirtualMachineParameters(virtualMachineDTO, student.get().getId());
         }
         catch (StudentNotFoundExeption e){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         catch (StudentServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
@@ -451,7 +456,7 @@ public class StudentController {
      * @param userDetails the user who make the request
      * @param multipartFile the delivery to upload
      */
-    @PostMapping("/{id}/{coursename}/{assignmentid}/{homeworkid}/deliveries")
+    @PostMapping("/{id}/homework/{homeworkid}/deliveries")
     @ResponseStatus(HttpStatus.CREATED)
     public void uploadDelivery(@PathVariable String id,
                                @PathVariable Long homeworkid,
@@ -470,25 +475,26 @@ public class StudentController {
             if(supportedMediaTypes.stream().noneMatch(x -> x.equals(mediaType))){
                 throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
             }
-        }
-        catch (IOException e){
-            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-        }
 
-        if(!student.isPresent()){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
-        }
+            if(!student.isPresent()){
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, id);
+            }
 
-        // check if the student is the same of {id}
-        if(!student.get().getId().equals(id)){
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
+            // check if the student is the same of {id}
+            if(!student.get().getId().equals(id)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
 
-        try{
-            studentService.uploadDelivery(homeworkid, multipartFile);
+            studentService.uploadDelivery(id, homeworkid, multipartFile);
         }
         catch (StudentServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
+        catch (StudentNotFoundExeption e ){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        catch (IOException e){
+            throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
     }
 
@@ -499,7 +505,7 @@ public class StudentController {
      * @param userDetails the user who make the request
      * @return the image of the assignment
      */
-    @GetMapping(value = "/{id}/{coursename}/{assignmentid}",
+    @GetMapping(value = "/{id}/assignments/{assignmentid}",
             produces = MediaType.IMAGE_PNG_VALUE)
     @ResponseStatus(HttpStatus.OK)
     public byte[] getAssignmentImage(@PathVariable String id,
@@ -520,7 +526,7 @@ public class StudentController {
             return studentService.getAssignmentImage(assignmentid, id);
         }
         catch (StudentServiceException e){
-            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
     }
 
