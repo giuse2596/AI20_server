@@ -19,6 +19,7 @@ import javax.transaction.Transactional;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Transactional
 @Service
@@ -59,6 +60,8 @@ public class NotificationServiceImpl implements NotificationService{
     public boolean confirm(String token) {
         Optional<Token> t = this.tokenRepository.findById(token);
         Optional<Team> teamOptional;
+        List<Long> teamsId = new ArrayList<>();
+        List<Token> tokensId = new ArrayList<>();
 
         // verify if exist
         if(!t.isPresent()){
@@ -93,11 +96,22 @@ public class NotificationServiceImpl implements NotificationService{
                             (!x.getId().equals(teamOptional.get().getId())) &&
                             (x.getCourse().getName().equals(teamOptional.get().getCourse().getName()))
                             )
-                    .forEach(x -> {
-                        this.teamService.evictTeam(x.getId());
-                        this.tokenRepository.findAllByTeamId(x.getId())
-                                .forEach(y -> this.tokenRepository.delete(y));
-                    });
+                    .forEach(x -> teamsId.add(x.getId()));
+//                    .forEach(x -> {
+//                        this.teamService.evictTeam(x.getId());
+//                        this.tokenRepository.findAllByTeamId(x.getId())
+//                                .forEach(y -> this.tokenRepository.delete(y));
+//                    });
+
+            // remove the pending teams
+            teamsId.forEach(x -> this.teamService.evictTeam(x));
+
+            // store the remaining tokens of the pending teams
+            teamsId.forEach(x -> tokensId.addAll(this.tokenRepository.findAllByTeamId(x)));
+            
+            // delete the remaining tokens of the pending teams
+            tokensId.forEach(x -> this.tokenRepository.delete(x));
+
         }
 
         this.tokenRepository.deleteById(token);
