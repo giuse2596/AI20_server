@@ -67,7 +67,6 @@ public class TeamServiceImpl implements TeamService {
      * @param courseName the course name
      * @return list of all the teams in the course
      */
-    @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
     public List<TeamDTO> getTeamsForCourse(String courseName) {
         Optional<Course> courseOptional = courseRepository.findById(courseName);
