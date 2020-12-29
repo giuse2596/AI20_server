@@ -96,19 +96,20 @@ public class NotificationServiceImpl implements NotificationService{
                             (!x.getId().equals(teamOptional.get().getId())) &&
                             (x.getCourse().getName().equals(teamOptional.get().getCourse().getName()))
                             )
-                    .forEach(x -> teamsId.add(x.getId()));
-//                    .forEach(x -> {
-//                        this.teamService.evictTeam(x.getId());
-//                        this.tokenRepository.findAllByTeamId(x.getId())
-//                                .forEach(y -> this.tokenRepository.delete(y));
-//                    });
+                    .forEach(x -> {
+
+                        // check to avoid duplicates
+                        if(!teamsId.contains(x.getId())){
+                            teamsId.add(x.getId());
+                        }
+                    });
 
             // remove the pending teams
             teamsId.forEach(x -> this.teamService.evictTeam(x));
 
             // store the remaining tokens of the pending teams
             teamsId.forEach(x -> tokensId.addAll(this.tokenRepository.findAllByTeamId(x)));
-            
+
             // delete the remaining tokens of the pending teams
             tokensId.forEach(x -> this.tokenRepository.delete(x));
 
