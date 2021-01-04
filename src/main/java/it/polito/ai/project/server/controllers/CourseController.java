@@ -1000,7 +1000,7 @@ public class CourseController {
                                @AuthenticationPrincipal UserDetails userDetails){
 
         // check if the homeworkid is the same of the homeworkDTO
-        if(homeworkid != homeworkDTO.getId()){
+        if(!homeworkid.equals(homeworkDTO.getId())){
             throw new ResponseStatusException(HttpStatus.CONFLICT);
         }
 
