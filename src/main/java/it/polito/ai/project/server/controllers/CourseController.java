@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -422,7 +423,7 @@ public class CourseController {
      */
     @GetMapping(value="/{name}/teams/{teamid}/virtual_machines/{vmid}/image",
             produces = MediaType.IMAGE_PNG_VALUE)
-    public String getVirtualMachineImage(@PathVariable String name,
+    public byte[] getVirtualMachineImage(@PathVariable String name,
                                          @PathVariable Long teamid,
                                          @PathVariable Long vmid,
                                          @AuthenticationPrincipal UserDetails userDetails){
@@ -473,12 +474,58 @@ public class CourseController {
                 throw new ResponseStatusException(HttpStatus.CONFLICT);
             }
 
-            // check if the image can be retrieved
-            if(this.generalService.getVirtualMachineImage(vmid)){
-                return "virtual_machine";
-            } else{
+            return this.generalService.getVirtualMachineImage(vmid);
+
+        }
+        catch (GeneralServiceException | StudentServiceException e){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
+        catch (TeamNotFoundException | CourseNotFoundException | TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/{name}/teams/{teamid}/available_resources")
+    public HashMap<String, Integer> getTeamAvailableResources(@PathVariable String name,
+                                                              @PathVariable Long teamid,
+                                                              @AuthenticationPrincipal UserDetails userDetails){
+        List<String> roles = userDetails
+                .getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority).collect(Collectors.toList());
+
+        try {
+            // if is a teacher check that is his course
+            if (roles.contains("TEACHER")) {
+                if(!this.teacherService.teacherInCourse(userDetails.getUsername(), name)){
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+                }
+            }
+
+            // retrieve team members and check if the student belongs to it
+            if (roles.contains("STUDENT")) {
+                if(!this.teamService.getMembers(teamid)
+                        .stream()
+                        .map(x -> x.getId())
+                        .collect(Collectors.toList())
+                        .contains(userDetails.getUsername())
+                )
+                {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+                }
+            }
+
+            // check if the team belongs to the course
+            if (!this.teamService.getTeamsForCourse(name)
+                    .stream()
+                    .map(x -> x.getId())
+                    .collect(Collectors.toList())
+                    .contains(teamid)
+            ) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            return this.generalService.getVMAvailableResources(teamid);
 
         }
         catch (GeneralServiceException | StudentServiceException e){

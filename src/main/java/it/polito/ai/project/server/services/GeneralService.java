@@ -2,6 +2,7 @@ package it.polito.ai.project.server.services;
 
 import it.polito.ai.project.server.dtos.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,7 @@ public interface GeneralService {
     HomeworkDTO getStudentHomework(Long assignmentId, String studentId);
     VirtualMachineDTO getVirtualMachine(Long vmId);
     List<VirtualMachineDTO> getTeamVirtualMachines(Long teamId);
-    boolean getVirtualMachineImage(Long vmId);
+    byte[] getVirtualMachineImage(Long vmId);
     byte[] getDeliveryImage(Long deliveryId);
+    HashMap<String, Integer> getVMAvailableResources(Long teamId);
 }

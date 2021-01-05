@@ -13,6 +13,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -328,8 +329,10 @@ public class GeneralServiceImpl implements GeneralService{
      *          false if the virtual machine is not active;
      */
     @Override
-    public boolean getVirtualMachineImage(Long vmId) {
+    public byte[] getVirtualMachineImage(Long vmId) {
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
+        BufferedImage bufferedImage;
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
         // check if the vm exists
         if(!virtualMachineOptional.isPresent()){
@@ -348,10 +351,18 @@ public class GeneralServiceImpl implements GeneralService{
 
         // check if virtual machine is active
         if(!virtualMachineOptional.get().isActive()){
-            return false;
+            throw new GeneralServiceException("Virtual machine not active");
         }
 
-        return true;
+        try {
+            bufferedImage = ImageIO.read(new File(virtualMachineOptional.get().getPathImage()));
+            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+        }
+        catch (IOException e){
+            throw new GeneralServiceException("Error while reading the file");
+        }
+
+        return byteArrayOutputStream.toByteArray();
     }
 
     /**
@@ -378,6 +389,51 @@ public class GeneralServiceImpl implements GeneralService{
             throw new GeneralServiceException();
         }
         return byteArrayOutputStream.toByteArray();
+    }
+
+    /**
+     * Retrieve the available resources of a team
+     * @param teamId the team id
+     * @return a map with all the values of the available resources
+     */
+    @Override
+    public HashMap<String, Integer> getVMAvailableResources(Long teamId) {
+        HashMap<String, Integer> resources = new HashMap<>();
+        Optional<Team> teamOptional = this.teamRepository.findById(teamId);
+        int totCpu;
+        int totRam;
+        int totDiskSpace;
+
+        // check if the team exists
+        if(!teamOptional.isPresent()){
+            throw new TeamNotFoundException();
+        }
+
+        // sum the total cpu of all virtual machines
+        totCpu = teamOptional.get().getVirtualMachines()
+                .stream()
+                .map(VirtualMachine::getCpu)
+                .reduce(0, Integer::sum);
+
+        resources.put("cpu",teamOptional.get().getCpuMax() - totCpu);
+
+        // sum the total ram of all virtual machines
+        totRam = teamOptional.get().getVirtualMachines()
+                .stream()
+                .map(VirtualMachine::getRam)
+                .reduce(0, Integer::sum);
+
+        resources.put("ram",teamOptional.get().getRamMax() - totRam);
+
+        // sum the total disk space of all virtual machines
+        totDiskSpace = teamOptional.get().getVirtualMachines()
+                .stream()
+                .map(VirtualMachine::getDiskSpace)
+                .reduce(0, Integer::sum);
+
+        resources.put("diskSpace",teamOptional.get().getDiskSpaceMax() - totDiskSpace);
+
+        return resources;
     }
 
 }
