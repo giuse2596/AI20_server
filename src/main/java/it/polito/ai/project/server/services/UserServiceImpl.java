@@ -9,12 +9,10 @@ import it.polito.ai.project.server.repositories.TeacherRepository;
 import it.polito.ai.project.server.repositories.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -51,7 +49,7 @@ public class UserServiceImpl implements UserService{
         User user = new User();
         Student student = new Student();
 
-        if(this.userRepository.findByUsername(userDTO.getEmail()).isPresent()){
+        if(this.userRepository.findByUsername(userDTO.getUsername()).isPresent()){
             throw new UserServiceException();
         }
 
@@ -82,7 +80,7 @@ public class UserServiceImpl implements UserService{
         User user = new User();
         Teacher teacher = new Teacher();
 
-        if(this.userRepository.findByUsername(userDTO.getEmail()).isPresent()){
+        if(this.userRepository.findByUsername(userDTO.getUsername()).isPresent()){
             throw new UserServiceException();
         }
 

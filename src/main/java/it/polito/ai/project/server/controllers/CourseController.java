@@ -408,10 +408,80 @@ public class CourseController {
         catch (TeamNotFoundException | CourseNotFoundException | TeacherServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        catch (StudentServiceException e){
+        catch (GeneralServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
 
+    }
+
+    /**
+     * Retrieve the owners of a team's virtual machine
+     * @param teamid the team id
+     * @param vmid the virtual machine id
+     * @param userDetails the user who make the request
+     * @return the owners of a virtual machine
+     */
+    @GetMapping("/{name}/teams/{teamid}/virtual_machines/{vmid}/owners")
+    public List<StudentDTO> getVirtualMachineOwners(@PathVariable String name,
+                                                    @PathVariable Long teamid,
+                                                    @PathVariable Long vmid,
+                                                    @AuthenticationPrincipal UserDetails userDetails){
+        List<String> roles = userDetails
+                .getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority).collect(Collectors.toList());
+
+        try {
+            // if is a teacher check that is his course
+            if (roles.contains("TEACHER")) {
+                if(!this.teacherService.teacherInCourse(userDetails.getUsername(), name)){
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+                }
+            }
+
+            // retrieve team members and check if the student belongs to it
+            if (roles.contains("STUDENT")) {
+                if(!this.teamService.getMembers(teamid)
+                        .stream()
+                        .map(x -> x.getId())
+                        .collect(Collectors.toList())
+                        .contains(userDetails.getUsername())
+                )
+                {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+                }
+            }
+
+            // check if the team belongs to the course
+            if (!this.teamService.getTeamsForCourse(name)
+                    .stream()
+                    .map(x -> x.getId())
+                    .collect(Collectors.toList())
+                    .contains(teamid)
+            ) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
+            // check if the virtual machine belongs to the team
+            if(
+                    !this.generalService.getTeamVirtualMachines(teamid)
+                            .stream()
+                            .map(x -> x.getId())
+                            .collect(Collectors.toList())
+                            .contains(vmid)
+            ){
+                throw new ResponseStatusException(HttpStatus.CONFLICT);
+            }
+
+            return this.generalService.getVirtualMachineOwners(vmid);
+
+        }
+        catch (GeneralServiceException e){
+            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
+        catch (TeamNotFoundException | CourseNotFoundException | TeacherServiceException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
     }
 
     /**
@@ -477,7 +547,7 @@ public class CourseController {
             return this.generalService.getVirtualMachineImage(vmid);
 
         }
-        catch (GeneralServiceException | StudentServiceException e){
+        catch (GeneralServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
         }
         catch (TeamNotFoundException | CourseNotFoundException | TeacherServiceException e){

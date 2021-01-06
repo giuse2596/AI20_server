@@ -16,6 +16,8 @@ public class VirtualMachineDTO extends RepresentationModel<VirtualMachineDTO> {
 
     private String pathImage;
 
+    private String creator;
+
     @NotNull
     private Integer cpu;
 

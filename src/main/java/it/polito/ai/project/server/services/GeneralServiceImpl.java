@@ -279,17 +279,17 @@ public class GeneralServiceImpl implements GeneralService{
 
         // check if the vm exists
         if(!virtualMachineOptional.isPresent()){
-            throw new StudentServiceException("Virtual machine doesn't exist");
+            throw new GeneralServiceException("Virtual machine doesn't exist");
         }
 
         // check if the course is enabled
         if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
-            throw new StudentServiceException("Course not enabled");
+            throw new GeneralServiceException("Course not enabled");
         }
 
         // check if the team is active
         if(!virtualMachineOptional.get().getTeam().isActive()){
-            throw new StudentServiceException("Team not active");
+            throw new GeneralServiceException("Team not active");
         }
 
         return this.modelMapper.map(virtualMachineOptional.get(),
@@ -312,13 +312,43 @@ public class GeneralServiceImpl implements GeneralService{
 
         // check if the course is enabled
         if(!teamOptional.get().getCourse().isEnabled()){
-            throw new StudentServiceException("Course not enabled");
+            throw new GeneralServiceException("Course not enabled");
+        }
+
+        // check if the team is active
+        if(!teamOptional.get().isActive()){
+            throw new GeneralServiceException("Team not active");
         }
 
         return teamOptional.get()
                 .getVirtualMachines()
                 .stream()
                 .map(x -> modelMapper.map(x, VirtualMachineDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<StudentDTO> getVirtualMachineOwners(Long vmId) {
+        Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
+
+        // check if the vm exists
+        if(!virtualMachineOptional.isPresent()){
+            throw new GeneralServiceException("Virtual machine doesn't exist");
+        }
+
+        // check if the course is enabled
+        if(!virtualMachineOptional.get().getTeam().getCourse().isEnabled()){
+            throw new GeneralServiceException("Course not enabled");
+        }
+
+        // check if the team is active
+        if(!virtualMachineOptional.get().getTeam().isActive()){
+            throw new GeneralServiceException("Team not active");
+        }
+
+        return virtualMachineOptional.get().getOwners()
+                .stream()
+                .map(x -> modelMapper.map(x, StudentDTO.class))
                 .collect(Collectors.toList());
     }
 
@@ -403,6 +433,7 @@ public class GeneralServiceImpl implements GeneralService{
         int totCpu;
         int totRam;
         int totDiskSpace;
+        int totVM;
 
         // check if the team exists
         if(!teamOptional.isPresent()){
@@ -432,6 +463,11 @@ public class GeneralServiceImpl implements GeneralService{
                 .reduce(0, Integer::sum);
 
         resources.put("diskSpace",teamOptional.get().getDiskSpaceMax() - totDiskSpace);
+
+        // sum the total virtual machines created in the team
+        totVM = teamOptional.get().getVirtualMachines().size();
+
+        resources.put("totVM", totVM);
 
         return resources;
     }

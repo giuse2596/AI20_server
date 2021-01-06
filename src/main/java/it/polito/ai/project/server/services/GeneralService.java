@@ -19,6 +19,7 @@ public interface GeneralService {
     HomeworkDTO getStudentHomework(Long assignmentId, String studentId);
     VirtualMachineDTO getVirtualMachine(Long vmId);
     List<VirtualMachineDTO> getTeamVirtualMachines(Long teamId);
+    List<StudentDTO> getVirtualMachineOwners(Long vmId);
     byte[] getVirtualMachineImage(Long vmId);
     byte[] getDeliveryImage(Long deliveryId);
     HashMap<String, Integer> getVMAvailableResources(Long teamId);

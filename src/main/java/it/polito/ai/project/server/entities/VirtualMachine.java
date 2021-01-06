@@ -24,6 +24,9 @@ public class VirtualMachine {
     @NotBlank
     private String pathImage;
 
+    @NotBlank
+    private String creator;
+
     @NotNull
     private Integer cpu;
 

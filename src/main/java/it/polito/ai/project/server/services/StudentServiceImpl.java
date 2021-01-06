@@ -15,6 +15,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -165,6 +166,7 @@ public class StudentServiceImpl implements StudentService{
         virtualMachine.setActive(false);
         virtualMachine.setTeam(teamOptional.get());
         virtualMachine.addOwner(studentOptional.get());
+        virtualMachine.setCreator(studentOptional.get().getId());
 
         this.virtualMachinesRepository.save(virtualMachine);
     }
@@ -359,6 +361,7 @@ public class StudentServiceImpl implements StudentService{
     public void deleteVirtualMachine(Long vmId, String studentId){
         Optional<VirtualMachine> virtualMachineOptional = this.virtualMachinesRepository.findById(vmId);
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+        List<Student> owners = new ArrayList<>();
 
         // check if the vm exist
         if(!virtualMachineOptional.isPresent()){
@@ -388,7 +391,10 @@ public class StudentServiceImpl implements StudentService{
         // delete the virtual machine from all the students and the team
         virtualMachineOptional.get()
                 .getOwners()
-                .forEach(x -> virtualMachineOptional.get().removeOwner(x));
+                .forEach(x -> owners.add(x));
+
+        owners.forEach(x -> virtualMachineOptional.get().removeOwner(x));
+
         virtualMachineOptional.get().setTeam(null);
 
         this.virtualMachinesRepository.deleteById(vmId);
