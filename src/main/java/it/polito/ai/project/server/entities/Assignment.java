@@ -33,7 +33,7 @@ public class Assignment {
     @JoinColumn(name= "course_id")
     Course course;
 
-    @OneToMany(mappedBy = "assignment")
+    @OneToMany(mappedBy = "assignment", fetch = FetchType.EAGER)
     List<Homework> homeworks = new ArrayList<Homework>();
 
     public void addHomework(Homework homework){

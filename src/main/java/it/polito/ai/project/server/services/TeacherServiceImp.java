@@ -547,11 +547,6 @@ public class TeacherServiceImp implements TeacherService {
             throw new TeacherServiceException("Cannot change max active virtual machine value");
         }
 
-        // check if the total team's virtual machines is greater than the max
-        if(teamToUpdate.getVirtualMachines().size() > newTeam.getActiveVM()){
-            throw new TeacherServiceException("Cannot change max total virtual machine value");
-        }
-
         // apply the changes to the team
         teamToUpdate.setCpuMax(newTeam.getCpuMax());
         teamToUpdate.setRamMax(newTeam.getRamMax());

@@ -216,6 +216,25 @@ public class StudentServiceImpl implements StudentService{
             throw new StudentServiceException("Course not enabled");
         }
 
+        // check if the DTO has a different name from the one in the repo
+        // if yes change it
+        if(!virtualMachineOptional.get().getName().equals(virtualMachineDTO.getName())){
+
+            // check if the name is unique for all the team virtual machines
+            if(team.getVirtualMachines().stream()
+                    .map(VirtualMachine::getName)
+                    .collect(Collectors.toList())
+                    .contains(virtualMachineDTO.getName())
+            ){
+                throw new StudentServiceException("The vm name must be unique");
+
+            }
+
+            // change virtual machine name
+            virtualMachineOptional.get().setName(virtualMachineDTO.getName());
+        }
+
+
         // check the cpu, ram and diskspace constraints
         if (
             (team.getVirtualMachines().stream().map(VirtualMachine::getCpu).reduce(0, Integer::sum)

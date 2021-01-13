@@ -888,7 +888,7 @@ public class CourseController {
      */
     @PutMapping("/{name}/modify")
     public void modifyCourse(@PathVariable String name,
-                             @RequestParam @Valid CourseDTO courseDTO,
+                             @RequestBody @Valid CourseDTO courseDTO,
                              @AuthenticationPrincipal UserDetails userDetails){
 
         // check if is a teacher of the course

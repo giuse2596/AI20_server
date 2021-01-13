@@ -434,6 +434,7 @@ public class GeneralServiceImpl implements GeneralService{
         int totRam;
         int totDiskSpace;
         int totVM;
+        int activeVM;
 
         // check if the team exists
         if(!teamOptional.isPresent()){
@@ -468,6 +469,14 @@ public class GeneralServiceImpl implements GeneralService{
         totVM = teamOptional.get().getVirtualMachines().size();
 
         resources.put("totVM", totVM);
+
+        // sum all the active virtual machines created in the team
+        activeVM = (int) teamOptional.get().getVirtualMachines()
+                .stream()
+                .filter(x -> x.isActive())
+                .count();
+
+        resources.put("activeVM", activeVM);
 
         return resources;
     }
