@@ -403,6 +403,7 @@ public class GeneralServiceImpl implements GeneralService{
     @Override
     public byte[] getDeliveryImage(Long deliveryId){
         Optional<Delivery> deliveryOptional = this.deliveryRepository.findById(deliveryId);
+        Optional<String> extension;
         BufferedImage bufferedImage;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -411,9 +412,14 @@ public class GeneralServiceImpl implements GeneralService{
             throw new GeneralServiceException();
         }
 
+        // get the file extension
+        extension = Optional.ofNullable(deliveryOptional.get().getPathImage())
+                .filter(x -> x.contains("."))
+                .map(x -> x.substring(deliveryOptional.get().getPathImage().lastIndexOf(".") + 1));
+
         try {
             bufferedImage = ImageIO.read(new File(deliveryOptional.get().getPathImage()));
-            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+            ImageIO.write(bufferedImage, extension.get(), byteArrayOutputStream);
         }
         catch (IOException e){
             throw new GeneralServiceException();

@@ -487,6 +487,7 @@ public class StudentServiceImpl implements StudentService{
     public void uploadDelivery(String studentId, Long homeworkId, MultipartFile multipartFile){
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
+        Optional<String> extension;
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
         Date deliveryDate = Date.valueOf(timestamp.toLocalDateTime().toLocalDate());
         Delivery delivery = new Delivery();
@@ -494,6 +495,15 @@ public class StudentServiceImpl implements StudentService{
         InputStream inputStream;
         OutputStream outputStream;
         Delivery.Status status;
+
+        extension = Optional.ofNullable(multipartFile.getOriginalFilename())
+                .filter(x -> x.contains("."))
+                .map(x -> x.substring(multipartFile.getOriginalFilename().lastIndexOf(".") + 1));
+
+        // check if the file has an extension
+        if(!extension.isPresent()){
+            throw new NoExtensionException();
+        }
 
         // check if the student exists
         if (!studentOptional.isPresent()) {
@@ -541,7 +551,7 @@ public class StudentServiceImpl implements StudentService{
         this.deliveryRepository.save(delivery);
 
         delivery.setPathImage("src/main/resources/images/deliveries/" +
-                delivery.getId().toString() + ".png");
+                delivery.getId().toString() + "." + extension.get());
 
         newFile = new File(delivery.getPathImage());
 
@@ -576,6 +586,7 @@ public class StudentServiceImpl implements StudentService{
     public byte[] getAssignmentImage(Long assignmentId, String studentId){
         Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
+        Optional<String> extension;
         BufferedImage bufferedImage;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         Delivery delivery = new Delivery();
@@ -617,9 +628,14 @@ public class StudentServiceImpl implements StudentService{
             this.deliveryRepository.save(delivery);
         }
 
+        // get the extension of the file
+        extension = Optional.ofNullable(assignmentOptional.get().getPathImage())
+                .filter(x -> x.contains("."))
+                .map(x -> x.substring(assignmentOptional.get().getPathImage().lastIndexOf(".") + 1));
+
         try {
             bufferedImage = ImageIO.read(new File(assignmentOptional.get().getPathImage()));
-            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+            ImageIO.write(bufferedImage, extension.get(), byteArrayOutputStream);
         }
         catch (IOException e){
             throw new StudentServiceException();

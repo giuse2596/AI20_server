@@ -18,6 +18,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Optional;
 
 @Service
@@ -122,31 +123,20 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    public UserDTO modifyUser(UserDTO userDTO) {
-        Optional<User> userOptional = this.userRepository.findByUsername(userDTO.getUsername());
-        Optional<Student> studentOptional;
-        Optional<Teacher> teacherOptional;
-        String[] splittedEmail = userDTO.getEmail().trim().split("@");
+    public UserDTO modifyUser(String username, HashMap<String, String> passwords) {
+        Optional<User> userOptional = this.userRepository.findByUsername(username);
 
         // check if user exists
         if(!userOptional.isPresent()){
             throw new GeneralServiceException("User not found");
         }
 
-        userOptional.get().setName(userDTO.getName());
-        userOptional.get().setFirstName(userDTO.getFirstName());
-        userOptional.get().setPassword(userDTO.getPassword());
+        // check if the first password is the same of the original one
+        if(!userOptional.get().getPassword().equals(passwords.get("password1"))){
+            throw new GeneralServiceException("Password does not match");
+        }
 
-        if (splittedEmail[1].equals("studenti.polito.it")) {
-            studentOptional = this.studentRepository.findById(userDTO.getUsername());
-            studentOptional.get().setName(userDTO.getName());
-            studentOptional.get().setFirstName(userDTO.getFirstName());
-        }
-        else {
-            teacherOptional = this.teacherRepository.findById(userDTO.getUsername());
-            teacherOptional.get().setName(userDTO.getName());
-            teacherOptional.get().setFirstName(userDTO.getFirstName());
-        }
+        userOptional.get().setPassword(passwords.get("password2"));
 
         this.userRepository.save(userOptional.get());
 
@@ -156,6 +146,7 @@ public class UserServiceImpl implements UserService{
     @Override
     public void modifyUserImage(String username, MultipartFile multipartFile) {
         Optional<User> userOptional = this.userRepository.findByUsername(username);
+        Optional<String> extension;
         File newFile;
         InputStream inputStream;
         OutputStream outputStream;
@@ -164,12 +155,23 @@ public class UserServiceImpl implements UserService{
             throw new UserServiceException("User not found");
         }
 
-        if(!userOptional.get().getPathImage().equals("src/main/resources/images/users/default_user.png")){
-            newFile = new File(userOptional.get().getPathImage());
-        } else {
-            userOptional.get().setPathImage("src/main/resources/images/users/" + username + ".png");
-            newFile = new File(userOptional.get().getPathImage());
+        // get the extension of the file
+        extension = Optional.ofNullable(multipartFile.getOriginalFilename())
+                .filter(x -> x.contains("."))
+                .map(x -> x.substring(multipartFile.getOriginalFilename().lastIndexOf(".") + 1));
+
+        // check if the file has an extension
+        if(!extension.isPresent()){
+            throw new NoExtensionException();
         }
+
+        // get the user image
+        newFile = new File(userOptional.get().getPathImage());
+
+        // set the new path to the image
+        userOptional.get().setPathImage(
+                "src/main/resources/images/users/" + username + "." + extension.get()
+        );
 
         try {
             inputStream = multipartFile.getInputStream();
@@ -193,6 +195,7 @@ public class UserServiceImpl implements UserService{
     @Override
     public byte[] getUserImage(String username) {
         Optional<User> userOptional = this.userRepository.findByUsername(username);
+        Optional<String> extension;
         BufferedImage bufferedImage;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -200,9 +203,14 @@ public class UserServiceImpl implements UserService{
             throw new UserServiceException("User not found");
         }
 
+        // get the extension of the file
+        extension = Optional.ofNullable(userOptional.get().getPathImage())
+                .filter(x -> x.contains("."))
+                .map(x -> x.substring(userOptional.get().getPathImage().lastIndexOf(".") + 1));
+
         try {
             bufferedImage = ImageIO.read(new File(userOptional.get().getPathImage()));
-            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+            ImageIO.write(bufferedImage, extension.get(), byteArrayOutputStream);
         }
         catch (IOException e){
             throw new UserServiceException("Error reading the file");

@@ -4,6 +4,7 @@ import it.polito.ai.project.server.dtos.UserDTO;
 import it.polito.ai.project.server.entities.User;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 public interface UserService {
@@ -11,7 +12,7 @@ public interface UserService {
     UserDTO registerStudent(UserDTO userDTO);
     UserDTO registerTeacher(UserDTO userDTO);
     User getActiveUser(String username);
-    UserDTO modifyUser(UserDTO userDTO);
+    UserDTO modifyUser(String username, HashMap<String, String> passwords);
     void modifyUserImage(String username, MultipartFile multipartFile);
     byte[] getUserImage(String username);
 }

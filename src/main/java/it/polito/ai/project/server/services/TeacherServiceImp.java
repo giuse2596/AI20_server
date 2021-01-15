@@ -568,9 +568,22 @@ public class TeacherServiceImp implements TeacherService {
     public AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName) {
         Assignment newAssignemt = new Assignment();
         Optional<Course> courseOptional = courseRepository.findById(courseName);
+        Optional<String> extension;
         File newFile;
         InputStream inputStream;
         OutputStream outputStream;
+
+        extension = Optional.ofNullable(assignment.getMultipartFile().getOriginalFilename())
+                .filter(x -> x.contains("."))
+                .map(x -> x.substring(
+                        assignment.getMultipartFile().getOriginalFilename().lastIndexOf(".") + 1
+                        )
+                );
+
+        // check if the file has an extension
+        if(!extension.isPresent()){
+            throw new NoExtensionException();
+        }
 
         // check if the course exists
         if(!courseOptional.isPresent()){
@@ -604,7 +617,7 @@ public class TeacherServiceImp implements TeacherService {
         // set path of the file
         newAssignemt.setPathImage("src/main/resources/images/assignments/" +
                 newAssignemt.getId().toString() +
-                ".png");
+                "." + extension.get());
 
         newFile = new File(newAssignemt.getPathImage());
 
@@ -732,10 +745,20 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     public void revisionDelivery(Long homeworkId, MultipartFile multipartFile) {
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
+        Optional<String> extension;
         Delivery delivery = new Delivery();
         File newFile;
         InputStream inputStream;
         OutputStream outputStream;
+
+        extension = Optional.ofNullable(multipartFile.getOriginalFilename())
+                .filter(x -> x.contains("."))
+                .map(x -> x.substring(multipartFile.getOriginalFilename().lastIndexOf(".") + 1));
+
+        // check if file has an extension
+        if(!extension.isPresent()){
+            throw new NoExtensionException();
+        }
 
         // check if the homework exists
         if (!homeworkOptional.isPresent()) {
@@ -756,7 +779,7 @@ public class TeacherServiceImp implements TeacherService {
         this.deliveryRepository.save(delivery);
 
         delivery.setPathImage("src/main/resources/images/deliveries/" +
-                delivery.getId().toString() + ".png");
+                delivery.getId().toString() + "." + extension.get());
 
         // save the file in the application
         newFile = new File(delivery.getPathImage());
@@ -791,6 +814,7 @@ public class TeacherServiceImp implements TeacherService {
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     public byte[] getAssignmentImage(Long assignmentId) {
         Optional<Assignment> assignmentOptional = this.assignmentRepository.findById(assignmentId);
+        Optional<String> extension;
         BufferedImage bufferedImage;
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
@@ -799,9 +823,14 @@ public class TeacherServiceImp implements TeacherService {
             throw new TeacherServiceException("Assignment does not exist");
         }
 
+        // get the extension of the file
+        extension = Optional.ofNullable(assignmentOptional.get().getPathImage())
+                .filter(x -> x.contains("."))
+                .map(x -> x.substring(assignmentOptional.get().getPathImage().lastIndexOf(".") + 1));
+
         try {
             bufferedImage = ImageIO.read(new File(assignmentOptional.get().getPathImage()));
-            ImageIO.write(bufferedImage, "png", byteArrayOutputStream);
+            ImageIO.write(bufferedImage, extension.get(), byteArrayOutputStream);
         }
         catch (IOException e){
             throw new TeacherServiceException("Error reading the file");

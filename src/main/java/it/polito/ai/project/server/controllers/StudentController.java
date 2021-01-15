@@ -468,6 +468,8 @@ public class StudentController {
         List<String> supportedMediaTypes = new ArrayList<>();
 
         supportedMediaTypes.add("image/png");
+        supportedMediaTypes.add("image/jpeg");
+        supportedMediaTypes.add("image/jpg");
 
         // check media type of the file
         try {
@@ -496,6 +498,9 @@ public class StudentController {
         catch (IOException e){
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
+        catch (NoExtensionException e){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
     }
 
     /**
@@ -506,7 +511,7 @@ public class StudentController {
      * @return the image of the assignment
      */
     @GetMapping(value = "/{id}/assignments/{assignmentid}",
-            produces = MediaType.IMAGE_PNG_VALUE)
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/jpg"})
     @ResponseStatus(HttpStatus.OK)
     public byte[] getAssignmentImage(@PathVariable String id,
                                      @PathVariable Long assignmentid,

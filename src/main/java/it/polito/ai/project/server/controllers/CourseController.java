@@ -492,7 +492,7 @@ public class CourseController {
      * @return the imagine of a virtual machine
      */
     @GetMapping(value="/{name}/teams/{teamid}/virtual_machines/{vmid}/image",
-            produces = MediaType.IMAGE_PNG_VALUE)
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/jpg"})
     public byte[] getVirtualMachineImage(@PathVariable String name,
                                          @PathVariable Long teamid,
                                          @PathVariable Long vmid,
@@ -1071,6 +1071,9 @@ public class CourseController {
         List<String> supportedMediaTypes = new ArrayList<>();
 
         supportedMediaTypes.add("image/png");
+        supportedMediaTypes.add("image/jpg");
+        supportedMediaTypes.add("image/jpeg");
+
 
         // check media type of the file
         try {
@@ -1099,6 +1102,9 @@ public class CourseController {
         }
         catch (TeacherServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
+        }
+        catch (NoExtensionException e){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -1179,6 +1185,8 @@ public class CourseController {
         List<String> supportedMediaTypes = new ArrayList<>();
 
         supportedMediaTypes.add("image/png");
+        supportedMediaTypes.add("image/jpg");
+        supportedMediaTypes.add("image/jpeg");
 
         try {
             // check media type of the file
@@ -1220,6 +1228,9 @@ public class CourseController {
         catch (IOException e){
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
+        catch (NoExtensionException e){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
     }
 
     /**
@@ -1230,7 +1241,7 @@ public class CourseController {
      * @return the image of the assignment
      */
     @GetMapping(value = "/{name}/assignments/{assignmentid}/image",
-            produces = MediaType.IMAGE_PNG_VALUE)
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/jpg"})
     public byte[] getAssignmentImage(@PathVariable String name,
                                      @PathVariable Long assignmentid,
                                      @AuthenticationPrincipal UserDetails userDetails){
@@ -1283,7 +1294,7 @@ public class CourseController {
      * @return the image of the delivery
      */
     @GetMapping(value = "/{name}/{studentid}/deliveries/{deliveryid}",
-            produces = MediaType.IMAGE_PNG_VALUE)
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/jpg"})
     @ResponseStatus(HttpStatus.OK)
     public byte[] getDeliveryImage(@PathVariable String name,
                                    @PathVariable String studentid,

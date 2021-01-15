@@ -74,7 +74,7 @@ public class UserinfoController {
     }
 
     @PutMapping("/modify_user")
-    public UserDTO modifyUser(@RequestBody UserDTO userDTO,
+    public UserDTO modifyUser(@RequestBody HashMap<String, String> passwords,
                               @AuthenticationPrincipal UserDetails userDetails){
         Optional<UserDTO> userOptional = this.userService.getUser(userDetails.getUsername());
 
@@ -82,8 +82,12 @@ public class UserinfoController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
+        if(!passwords.containsKey("password1") | !passwords.containsKey("password2")){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
+
         try{
-            return this.userService.modifyUser(userDTO);
+            return this.userService.modifyUser(userDetails.getUsername(), passwords);
         }
         catch (GeneralServiceException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
@@ -101,6 +105,9 @@ public class UserinfoController {
         List<String> supportedMediaTypes = new ArrayList<>();
 
         supportedMediaTypes.add("image/png");
+        supportedMediaTypes.add("image/jpeg");
+        supportedMediaTypes.add("image/jpg");
+
 
         // check media type of the file
         try {
@@ -124,13 +131,18 @@ public class UserinfoController {
 
         try{
             this.userService.modifyUserImage(username, multipartFile);
-        } catch (UserServiceException e){
+        }
+        catch (UserServiceException e){
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+        catch (NoExtensionException e){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
     }
 
-    @GetMapping(value="/{username}/user_image", produces = MediaType.IMAGE_PNG_VALUE)
+    @GetMapping(value="/{username}/user_image",
+            produces = {MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE, "image/jpg"})
     public byte[] getUserImage(@PathVariable String username,
                                @AuthenticationPrincipal UserDetails userDetails){
         Optional<UserDTO> userOptional = this.userService.getUser(userDetails.getUsername());
