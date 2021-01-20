@@ -15,6 +15,8 @@ import javax.imageio.ImageIO;
 import javax.transaction.Transactional;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -690,7 +692,19 @@ public class TeacherServiceImp implements TeacherService {
         tempdeliveries.forEach(x -> x.setHomework(null));
 
         // remove all deliveries form the repository
-        tempdeliveries.forEach(x -> this.deliveryRepository.deleteById(x.getId()));
+        tempdeliveries.forEach(x -> {
+
+            // if the image of the delivery is not the default one it is deleted
+            if(!x.getPathImage().equals("src/main/resources/images/deliveries/empty_image.png")){
+                try {
+                    Files.delete(Paths.get(x.getPathImage()));
+                } catch (IOException e) {
+                    throw new UserServiceException("Error deleting the old image");
+                }
+            }
+
+            this.deliveryRepository.deleteById(x.getId());
+        });
 
         // store the homeworks to remove
         assignmentOptional.get().getHomeworks().forEach(x -> temphomeworks.add(x));
@@ -706,6 +720,12 @@ public class TeacherServiceImp implements TeacherService {
 
         // remove the course from the assignment
         assignmentOptional.get().setCourse(null);
+
+        try {
+            Files.delete(Paths.get(assignmentOptional.get().getPathImage()));
+        } catch (IOException e) {
+            throw new TeacherServiceException("Error deleting the old image");
+        }
 
         // remove the assignment
         assignmentRepository.deleteById(assignmentId);

@@ -10,6 +10,7 @@ import it.polito.ai.project.server.repositories.UserRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +18,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Optional;
@@ -125,6 +128,8 @@ public class UserServiceImpl implements UserService{
     @Override
     public UserDTO modifyUser(String username, HashMap<String, String> passwords) {
         Optional<User> userOptional = this.userRepository.findByUsername(username);
+        String newPassword = bCryptPasswordEncoder.encode(passwords.get("newPassword"));
+        PasswordEncoder encoder = new BCryptPasswordEncoder();
 
         // check if user exists
         if(!userOptional.isPresent()){
@@ -132,11 +137,11 @@ public class UserServiceImpl implements UserService{
         }
 
         // check if the first password is the same of the original one
-        if(!userOptional.get().getPassword().equals(passwords.get("password1"))){
+        if(!encoder.matches(passwords.get("oldPassword"), userOptional.get().getPassword())){
             throw new GeneralServiceException("Password does not match");
         }
 
-        userOptional.get().setPassword(passwords.get("password2"));
+        userOptional.get().setPassword(newPassword);
 
         this.userRepository.save(userOptional.get());
 
@@ -165,13 +170,25 @@ public class UserServiceImpl implements UserService{
             throw new NoExtensionException();
         }
 
-        // get the user image
-        newFile = new File(userOptional.get().getPathImage());
+        // check if the image is the default one if not delete the old image
+        if(!userOptional.get().getPathImage().equals("src/main/resources/images/users/default_user.png")){
+
+            // delete the image
+            try {
+                Files.delete(Paths.get(userOptional.get().getPathImage()));
+            } catch (IOException e) {
+                throw new UserServiceException("Error deleting the old image");
+            }
+
+        }
 
         // set the new path to the image
         userOptional.get().setPathImage(
                 "src/main/resources/images/users/" + username + "." + extension.get()
         );
+
+        // get the user image
+        newFile = new File(userOptional.get().getPathImage());
 
         try {
             inputStream = multipartFile.getInputStream();

@@ -82,7 +82,7 @@ public class UserinfoController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
 
-        if(!passwords.containsKey("password1") | !passwords.containsKey("password2")){
+        if(!passwords.containsKey("oldPassword") | !passwords.containsKey("newPassword")){
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         }
 
