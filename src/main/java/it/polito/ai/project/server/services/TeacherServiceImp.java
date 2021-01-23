@@ -18,6 +18,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Date;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,6 +93,27 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         return true;
+    }
+
+    /**
+     * Retrieve all the teachers of a course
+     * @param courseName the name of the course
+     * @return the list of all the teachers of a course
+     */
+    @PreAuthorize("hasRole('ROLE_TEACHER')")
+    @Override
+    public List<TeacherDTO> courseTeachers(String courseName) {
+        Optional<Course> courseOptional = this.courseRepository.findById(courseName);
+
+        // check if the course exists
+        if(!courseOptional.isPresent()){
+            throw new CourseNotFoundException();
+        }
+
+        return courseOptional.get().getTeachers()
+                .stream()
+                .map(x -> modelMapper.map(x, TeacherDTO.class))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -606,6 +628,11 @@ public class TeacherServiceImp implements TeacherService {
             throw new TeacherServiceException("Assignment name already exists for this course");
         }
 
+        // check if the expiry date is not the same of the creation day or a previous day
+        if(assignment.getExpiryDate().before(new Date(new Time(System.currentTimeMillis()).getTime()))){
+            throw new TeacherServiceException("The expiry date do not must be the current or previous day");
+        }
+
         // create the assignment
         newAssignemt.setName(assignment.getName());
         newAssignemt.setReleaseDate(new Date(new Timestamp(System.currentTimeMillis()).getTime()));
@@ -763,7 +790,7 @@ public class TeacherServiceImp implements TeacherService {
      */
     @Override
     @PreAuthorize("hasRole('ROLE_TEACHER')")
-    public void revisionDelivery(Long homeworkId, MultipartFile multipartFile) {
+    public DeliveryDTO revisionDelivery(Long homeworkId, MultipartFile multipartFile) {
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
         Optional<String> extension;
         Delivery delivery = new Delivery();
@@ -822,6 +849,7 @@ public class TeacherServiceImp implements TeacherService {
             throw new TeacherServiceException("Error saving the file");
         }
 
+        return modelMapper.map(delivery, DeliveryDTO.class);
     }
 
 

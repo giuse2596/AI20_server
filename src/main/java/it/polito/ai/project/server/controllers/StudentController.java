@@ -458,7 +458,7 @@ public class StudentController {
      */
     @PostMapping("/{id}/homework/{homeworkid}/deliveries")
     @ResponseStatus(HttpStatus.CREATED)
-    public void uploadDelivery(@PathVariable String id,
+    public DeliveryDTO uploadDelivery(@PathVariable String id,
                                @PathVariable Long homeworkid,
                                @AuthenticationPrincipal UserDetails userDetails,
                                @RequestBody MultipartFile multipartFile){
@@ -487,7 +487,7 @@ public class StudentController {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
 
-            studentService.uploadDelivery(id, homeworkid, multipartFile);
+            return studentService.uploadDelivery(id, homeworkid, multipartFile);
         }
         catch (StudentServiceException e){
             throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());

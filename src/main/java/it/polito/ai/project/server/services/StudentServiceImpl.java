@@ -484,7 +484,7 @@ public class StudentServiceImpl implements StudentService{
      */
     @PreAuthorize("hasRole('ROLE_STUDENT')")
     @Override
-    public void uploadDelivery(String studentId, Long homeworkId, MultipartFile multipartFile){
+    public DeliveryDTO uploadDelivery(String studentId, Long homeworkId, MultipartFile multipartFile){
         Optional<Student> studentOptional = this.studentRepository.findById(studentId);
         Optional<Homework> homeworkOptional = this.homeworkRepository.findById(homeworkId);
         Optional<String> extension;
@@ -573,6 +573,7 @@ public class StudentServiceImpl implements StudentService{
             throw new StudentServiceException("Error saving the file");
         }
 
+        return modelMapper.map(delivery, DeliveryDTO.class);
     }
 
     /**

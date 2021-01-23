@@ -102,6 +102,22 @@ public class CourseController {
     }
 
     /**
+     * Retrieve all the teachers of a course
+     * @param name the name of the course
+     * @return the list of the teachers of a course
+     */
+    @GetMapping("/{name}/course_teachers")
+    public List<TeacherDTO> getCourseTeachers(@PathVariable String name){
+
+        try{
+            return this.teacherService.courseTeachers(name);
+        }
+        catch (CourseNotFoundException e){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    /**
      * URL to retrieve all the students enrolled in a course
      * @param name the name of the course
      * @return all the students enrolled in the specified course
@@ -1175,7 +1191,7 @@ public class CourseController {
      */
     @PostMapping("/{name}/assignments/{assignmentid}/homeworks/{homeworkid}")
     @ResponseStatus(HttpStatus.OK)
-    public void revisionDelivery(@PathVariable String name,
+    public DeliveryDTO revisionDelivery(@PathVariable String name,
                                  @PathVariable Long assignmentid,
                                  @PathVariable Long homeworkid,
                                  @RequestBody MultipartFile multipartFile,
@@ -1220,7 +1236,7 @@ public class CourseController {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
 
-            this.teacherService.revisionDelivery(homeworkid, multipartFile);
+            return this.teacherService.revisionDelivery(homeworkid, multipartFile);
         }
         catch (StudentServiceException | TeacherServiceException | CourseNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());

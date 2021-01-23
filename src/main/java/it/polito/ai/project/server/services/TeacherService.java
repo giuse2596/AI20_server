@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface TeacherService {
     boolean teacherInCourse(String teacherId, String couseName);
+    List<TeacherDTO> courseTeachers(String courseName);
     boolean addCourse(CourseDTO course, String teacherId, VMModelDTO vmModelDTO);
     boolean removeCourse(String coursename);
     void modifyCourse(CourseDTO courseDTO);
@@ -20,7 +21,7 @@ public interface TeacherService {
     AssignmentDTO createAssignment(AssignmentDTO assignment, String courseName);
     void removeAssignment(Long assignmentId, String courseName);
     void assignMarkToHomework(HomeworkDTO homeworkDTO);
-    void revisionDelivery(Long homeworkId, MultipartFile multipartFile);
+    DeliveryDTO revisionDelivery(Long homeworkId, MultipartFile multipartFile);
     byte[] getAssignmentImage(Long assignmentId);
     VMModelDTO getVMModel(String courseName);
     void setEditableHomework(HomeworkDTO homeworkDTO);

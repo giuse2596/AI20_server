@@ -13,6 +13,6 @@ public interface StudentService {
     void stopVirtualMachine(Long vmId, String studentId);
     void deleteVirtualMachine(Long vmId, String studentId);
     void addVirtualMachineOwners(String owner, List<String> students, Long vmId);
-    void uploadDelivery(String studentId, Long homeworkId, MultipartFile multipartFile);
+    DeliveryDTO uploadDelivery(String studentId, Long homeworkId, MultipartFile multipartFile);
     byte[] getAssignmentImage(Long assignmentId, String studentId);
 }
