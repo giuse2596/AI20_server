@@ -931,13 +931,20 @@ public class CourseController {
     /**
      * Add a teacher to a course
      * @param name the name of the course
+     * @param teacherId the id of the teacher to add
      */
     @PostMapping("/{name}/add_teacher")
     @ResponseStatus(HttpStatus.OK)
     public void addTeacherToCourse(@PathVariable String name,
+                                   @RequestBody String teacherId,
                                    @AuthenticationPrincipal UserDetails userDetails){
         try {
-            if (!this.teacherService.addTeacherToCourse(userDetails.getUsername(), name)) {
+            // check if who performs the request is a teacher of this course
+            if(!teacherService.teacherInCourse(userDetails.getUsername(), name)){
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
+            if (!this.teacherService.addTeacherToCourse(teacherId, name)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT);
             }
         }
