@@ -9,6 +9,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 public class JwtTokenFilter extends GenericFilterBean {
@@ -27,12 +28,18 @@ public class JwtTokenFilter extends GenericFilterBean {
 
         String token = jwtTokenProvider.resolveToken((HttpServletRequest) servletRequest);
 
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            Authentication auth = token != null ? jwtTokenProvider.getAuthentication(token) : null;
-            SecurityContextHolder.getContext().setAuthentication(auth);
-        }
+        try {
 
-        filterChain.doFilter(servletRequest, servletResponse);
+            if (token != null && jwtTokenProvider.validateToken(token)) {
+                Authentication auth = token != null ? jwtTokenProvider.getAuthentication(token) : null;
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
+
+            filterChain.doFilter(servletRequest, servletResponse);
+        }
+        catch (InvalidJwtAuthenticationException e){
+            ((HttpServletResponse) servletResponse).sendError(HttpServletResponse.SC_FORBIDDEN, e.getMessage());
+        }
 
     }
 }
