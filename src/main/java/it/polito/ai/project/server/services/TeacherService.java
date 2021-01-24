@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface TeacherService {
     boolean teacherInCourse(String teacherId, String couseName);
-    List<TeacherDTO> courseTeachers(String courseName);
+    List<TeacherDTO> teachersNotInCourse(String courseName);
     boolean addCourse(CourseDTO course, String teacherId, VMModelDTO vmModelDTO);
     boolean removeCourse(String coursename);
     void modifyCourse(CourseDTO courseDTO);

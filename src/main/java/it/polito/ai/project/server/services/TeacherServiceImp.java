@@ -102,7 +102,7 @@ public class TeacherServiceImp implements TeacherService {
      */
     @PreAuthorize("hasRole('ROLE_TEACHER')")
     @Override
-    public List<TeacherDTO> courseTeachers(String courseName) {
+    public List<TeacherDTO> teachersNotInCourse(String courseName) {
         Optional<Course> courseOptional = this.courseRepository.findById(courseName);
 
         // check if the course exists
@@ -110,7 +110,7 @@ public class TeacherServiceImp implements TeacherService {
             throw new CourseNotFoundException();
         }
 
-        return courseOptional.get().getTeachers()
+        return this.courseRepository.getTeachersNotInCourse(courseName)
                 .stream()
                 .map(x -> modelMapper.map(x, TeacherDTO.class))
                 .collect(Collectors.toList());

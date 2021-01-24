@@ -102,15 +102,15 @@ public class CourseController {
     }
 
     /**
-     * Retrieve all the teachers of a course
+     * Retrieve all the teachers that do not belong to a course
      * @param name the name of the course
-     * @return the list of the teachers of a course
+     * @return the list of the teachers that do not belong to a course
      */
-    @GetMapping("/{name}/course_teachers")
-    public List<TeacherDTO> getCourseTeachers(@PathVariable String name){
+    @GetMapping("/{name}/teachers_not_in_course")
+    public List<TeacherDTO> getTeachersNotInCourse(@PathVariable String name){
 
         try{
-            return this.teacherService.courseTeachers(name);
+            return this.teacherService.teachersNotInCourse(name);
         }
         catch (CourseNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
