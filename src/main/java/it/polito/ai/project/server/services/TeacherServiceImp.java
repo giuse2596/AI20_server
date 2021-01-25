@@ -375,6 +375,8 @@ public class TeacherServiceImp implements TeacherService {
     public boolean removeStudentToCourse(String studentId, String courseName, boolean deleteCourse) {
         Optional<Course> courseOptional = courseRepository.findById(courseName);
         Optional<Student> studentOptional = studentRepository.findById(studentId);
+        Optional<Team> teamOptional;
+        List<Long> vmIds = new ArrayList<>();
 
         // check if the course exist
         if(!courseOptional.isPresent()){
@@ -387,6 +389,8 @@ public class TeacherServiceImp implements TeacherService {
         }
 
         // check if the course is enabled and if the course is beeing deleted
+        // a student can be removed only if the course is enable OR if the course
+        // is going to be deleted
         if(!courseOptional.get().isEnabled() & !deleteCourse){
             return false;
         }
@@ -421,24 +425,30 @@ public class TeacherServiceImp implements TeacherService {
                 .filter(x -> x.getOwners().contains(studentOptional.get()))
                 .forEach(x -> {
                     x.removeOwner(studentOptional.get());
-                    // if the size of the owners is zero then remove the virtual machine
-                    // from the team and from the repository
+                    // if the size of the owners is zero then remove the virtual machine from the team
                     if(x.getOwners().size() == 0){
                         x.setTeam(null);
-                        this.vmModelRepository.deleteById(x.getId());
+                        vmIds.add(x.getId());
                     }
                 });
 
+        // remove the student virtual machines from the repository
+        vmIds.forEach(x -> this.virtualMachinesRepository.deleteById(x));
+
         // removing the student from the team
-        studentOptional.get().getTeams()
+        teamOptional = studentOptional.get().getTeams()
                 .stream()
                 .filter(x -> x.getCourse().getName().equals(courseName))
-                .forEach(x -> {
-                    x.removeMember(studentOptional.get());
-                    if(x.getMembers().size() == 0){
-                        teamService.evictTeam(x.getId());
-                    }
-                });
+                .findFirst();
+
+        // check if there is the student belong to a team and, if so, remove from it
+        if(teamOptional.isPresent()){
+            teamOptional.get().removeMember(studentOptional.get());
+
+            if(teamOptional.get().getMembers().size() == 0){
+                this.teamService.evictTeam(teamOptional.get().getId());
+            }
+        }
 
         // removing the student from the course
         courseOptional.get().removeStudent(studentOptional.get());

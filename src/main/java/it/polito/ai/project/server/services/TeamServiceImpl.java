@@ -404,6 +404,8 @@ public class TeamServiceImpl implements TeamService {
         Optional<Team> teamOptional = this.teamRepository.findById(teamId);
         List<VirtualMachine> tempvirtualmachines;
         List<Student> studentsInTeam = new ArrayList<>();
+        List<Long> vmIds = new ArrayList<>();
+        List<Student> vmOwners = new ArrayList<>();
 
         // check if the team exist
         if(!teamOptional.isPresent()){
@@ -417,13 +419,17 @@ public class TeamServiceImpl implements TeamService {
                                 .collect(Collectors.toList());
 
         // delete the relation between the virtual machine of the team and the students
-        tempvirtualmachines.forEach(x -> x.getOwners().forEach(x::removeOwner));
+        tempvirtualmachines.forEach(x -> {
+            vmOwners.addAll(x.getOwners());
+            vmOwners.forEach(y -> y.removeVM(x));
+        });
 
         // delete the team from the virtual machine
         tempvirtualmachines.forEach(x -> x.setTeam(null));
 
         // remove the virtual machine from the repository
-        tempvirtualmachines.forEach(x -> this.virtualMachinesRepository.deleteById(x.getId()));
+        tempvirtualmachines.forEach(x -> vmIds.add(x.getId()));
+        vmIds.forEach(x -> this.virtualMachinesRepository.deleteById(x));
 
         // remove team from each student, copying the members in a temporary variable
         // because the original list is modified
