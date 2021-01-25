@@ -376,7 +376,8 @@ public class TeacherServiceImp implements TeacherService {
         Optional<Course> courseOptional = courseRepository.findById(courseName);
         Optional<Student> studentOptional = studentRepository.findById(studentId);
         Optional<Team> teamOptional;
-        List<Long> vmIds = new ArrayList<>();
+        List<Delivery> tempdeliveries;
+        List<Homework> temphomeworks = new ArrayList<>();
 
         // check if the course exist
         if(!courseOptional.isPresent()){
@@ -417,38 +418,57 @@ public class TeacherServiceImp implements TeacherService {
             return false;
         }
 
-        // removing the student from the virtual machines
-        studentOptional.get().getTeams()
-                .stream()
-                .filter(x -> x.getCourse().getName().equals(courseName))
-                .flatMap(x -> x.getVirtualMachines().stream())
-                .filter(x -> x.getOwners().contains(studentOptional.get()))
-                .forEach(x -> {
-                    x.removeOwner(studentOptional.get());
-                    // if the size of the owners is zero then remove the virtual machine from the team
-                    if(x.getOwners().size() == 0){
-                        x.setTeam(null);
-                        vmIds.add(x.getId());
-                    }
-                });
-
-        // remove the student virtual machines from the repository
-        vmIds.forEach(x -> this.virtualMachinesRepository.deleteById(x));
-
-        // removing the student from the team
+        // retrieve the student course team
         teamOptional = studentOptional.get().getTeams()
                 .stream()
                 .filter(x -> x.getCourse().getName().equals(courseName))
                 .findFirst();
 
-        // check if there is the student belong to a team and, if so, remove from it
+        // check if the student belong to a team and, if so, remove the team
         if(teamOptional.isPresent()){
-            teamOptional.get().removeMember(studentOptional.get());
-
-            if(teamOptional.get().getMembers().size() == 0){
-                this.teamService.evictTeam(teamOptional.get().getId());
-            }
+            this.teamService.evictTeam(teamOptional.get().getId());
         }
+
+        // store the deliveries to remove
+        tempdeliveries = studentOptional.get()
+                            .getHomeworks()
+                            .stream()
+                            .filter(x -> x.getAssignment().getCourse().getName().equals(courseName))
+                            .flatMap(x -> x.getDeliveries().stream())
+                            .collect(Collectors.toList());
+
+        // remove the deliveries from the homework
+        tempdeliveries.forEach(x -> x.setHomework(null));
+
+        // remove all deliveries form the repository
+        tempdeliveries.forEach(x -> {
+
+            // if the image of the delivery is not the default one it is deleted
+            if(!x.getPathImage().equals("src/main/resources/images/deliveries/empty_image.png")){
+                try {
+                    Files.delete(Paths.get(x.getPathImage()));
+                } catch (IOException e) {
+                    throw new UserServiceException("Error deleting the old image");
+                }
+            }
+
+            this.deliveryRepository.deleteById(x.getId());
+        });
+
+        // store the homeworks and assignments to remove
+        studentOptional.get().getHomeworks()
+                .stream()
+                .filter(x -> x.getAssignment().getCourse().getName().equals(courseName))
+                .forEach(x -> temphomeworks.add(x));
+
+        // remove the homeworks from the student
+        temphomeworks.forEach(x -> x.getStudent().removeHomework(x));
+
+        // remove homeworks from the assignment
+        temphomeworks.forEach(x -> x.getAssignment().removeHomework(x));
+
+        // remove the homework from the repository
+        temphomeworks.forEach(x -> this.homeworkRepository.deleteById(x.getId()));
 
         // removing the student from the course
         courseOptional.get().removeStudent(studentOptional.get());
