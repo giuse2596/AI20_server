@@ -183,7 +183,7 @@ public class CourseController {
                         courseModelDTO.getVmModelDTO()
                 )
         ) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, courseModelDTO.getCourseDTO().getName());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Course already exists");
         }
 
         return modelHelper.enrich(this.generalService.getCourse(courseModelDTO.getCourseDTO().getName()).get());

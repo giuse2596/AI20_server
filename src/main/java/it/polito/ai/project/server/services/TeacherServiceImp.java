@@ -234,6 +234,11 @@ public class TeacherServiceImp implements TeacherService {
             throw new TeacherServiceException("Course not enabled");
         }
 
+        // check if the course has a max greater than the min
+        if (courseDTO.getMin()>courseDTO.getMax()) {
+            throw new TeacherServiceException("Minimum group number greater than maximum");
+        }
+
         // check if there are teams in a course
         if(courseOptional.get().getTeams().size() > 0){
 
