@@ -1,6 +1,7 @@
 package it.polito.ai.project.server.dtos;
 
 import lombok.Data;
+import org.hibernate.validator.constraints.Length;
 import org.springframework.hateoas.RepresentationModel;
 
 import javax.validation.constraints.Email;
@@ -17,6 +18,7 @@ public class UserDTO extends RepresentationModel<UserDTO> {
     private String email;
 
     @NotBlank
+    @Length(min = 8)
     private String password;
 
     @NotBlank

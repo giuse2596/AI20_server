@@ -3,6 +3,7 @@ package it.polito.ai.project.server.dtos;
 import lombok.Data;
 import org.springframework.hateoas.RepresentationModel;
 
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
@@ -18,13 +19,13 @@ public class VirtualMachineDTO extends RepresentationModel<VirtualMachineDTO> {
 
     private String creator;
 
-    @NotNull
+    @Min(1)
     private Integer cpu;
 
-    @NotNull
+    @Min(1)
     private Integer ram;
 
-    @NotNull
+    @Min(1)
     private Integer diskSpace;
 
     private boolean active;

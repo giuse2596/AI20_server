@@ -136,6 +136,11 @@ public class TeacherServiceImp implements TeacherService {
             return false;
         }
 
+        // check if min is greater than max
+        if (course.getMin() > course.getMax()) {
+            return false;
+        }
+
         // set the course enabled
         course.setEnabled(true);
 
