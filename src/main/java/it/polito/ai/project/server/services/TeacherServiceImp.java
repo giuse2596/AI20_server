@@ -589,7 +589,7 @@ public class TeacherServiceImp implements TeacherService {
                 .stream()
                 .map(x -> x.getRam())
                 .mapToInt(x -> x)
-                .sum() > newTeam.getCpuMax()){
+                .sum() > newTeam.getRamMax()){
             throw new TeacherServiceException("Cannot change ram value");
         }
 
@@ -599,7 +599,7 @@ public class TeacherServiceImp implements TeacherService {
                 .stream()
                 .map(x -> x.getDiskSpace())
                 .mapToInt(x -> x)
-                .sum() > newTeam.getCpuMax()){
+                .sum() > newTeam.getDiskSpaceMax()){
             throw new TeacherServiceException("Cannot change disk space value");
         }
 
