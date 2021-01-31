@@ -255,6 +255,9 @@ public class CourseController {
         catch (IOException e){
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
+        catch (WrongCSVException e){
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        }
         catch (TeacherServiceException | StudentNotFoundExeption | CourseNotFoundException e){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }

@@ -526,13 +526,22 @@ public class TeacherServiceImp implements TeacherService {
     @Override
     public List<Boolean> enrollCSV(Reader r, String courseName) {
         // create a csv reader
-        CsvToBean<StudentDTO> csvToBean = new CsvToBeanBuilder(r)
-                .withType(StudentDTO.class)
-                .withIgnoreLeadingWhiteSpace(true)
-                .build();
+        CsvToBean<StudentDTO> csvToBean;
+        List<StudentDTO> studentDTOS;
 
-        // convert `CsvToBean` object to list of students
-        List<StudentDTO> studentDTOS = csvToBean.parse();
+        try {
+
+            csvToBean = new CsvToBeanBuilder(r)
+                    .withType(StudentDTO.class)
+                    .withIgnoreLeadingWhiteSpace(true)
+                    .build();
+
+            // convert `CsvToBean` object to list of students
+            studentDTOS = csvToBean.parse();
+        }
+        catch (Exception e){
+            throw new WrongCSVException();
+        }
 
         // enroll all students to the course
         return enrollAll(
